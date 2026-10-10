@@ -1,0 +1,203 @@
+import os
+import json
+import logging
+from typing import Dict, Any, List, Optional
+import joblib
+import pandas as pd
+import numpy as np
+
+from services.data_service import data_service
+from services.feature_service import feature_service
+from schemas.prediction import (
+    PredictionResponse,
+    TechnicalIndicators,
+    MarketContextItem,
+    ModelInfoResponse,
+    ModelEvaluation,
+    PriceHistoryResponse,
+    PriceHistoryPoint
+)
+
+logger = logging.getLogger("pricepulse.prediction_service")
+
+# Resolve model paths relative to backend root or models folder
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+MODELS_DIR = os.path.join(BASE_DIR, "models")
+
+MODEL_PATH = os.path.join(MODELS_DIR, "pricepulse_improved_xgb_model.joblib")
+FEATURES_PATH = os.path.join(MODELS_DIR, "pricepulse_improved_features.joblib")
+METADATA_PATH = os.path.join(MODELS_DIR, "pricepulse_metadata.json")
+
+class PredictionService:
+    def __init__(self):
+        self.model = None
+        self.features: List[str] = []
+        self.metadata: Dict[str, Any] = {}
+        self.load_artifacts()
+
+    def load_artifacts(self):
+        logger.info(f"Loading ML artifacts from: {MODELS_DIR}")
+        
+        if not os.path.exists(MODEL_PATH):
+            raise FileNotFoundError(f"Model file not found at {MODEL_PATH}")
+        if not os.path.exists(FEATURES_PATH):
+            raise FileNotFoundError(f"Features file not found at {FEATURES_PATH}")
+        if not os.path.exists(METADATA_PATH):
+            raise FileNotFoundError(f"Metadata file not found at {METADATA_PATH}")
+
+        self.model = joblib.load(MODEL_PATH)
+        self.features = joblib.load(FEATURES_PATH)
+        
+        with open(METADATA_PATH, "r", encoding="utf-8") as f:
+            self.metadata = json.load(f)
+
+        logger.info(f"Loaded model: {type(self.model).__name__}")
+        logger.info(f"Loaded {len(self.features)} features: {self.features}")
+        
+        # Verify feature order and names match the model
+        if hasattr(self.model, "feature_names_in_"):
+            model_feat = list(self.model.feature_names_in_)
+            if model_feat != self.features:
+                raise ValueError("Model feature_names_in_ does not match saved features list!")
+        logger.info("Model and feature verification passed successfully.")
+
+    def run_prediction(self, force_refresh: bool = False) -> PredictionResponse:
+        """
+        Runs the end-to-end inference pipeline:
+        1. Fetch fresh market data
+        2. Clean & align
+        3. Compute exact 25 technical and market features
+        4. Select latest row
+        5. XGBoost Regressor predicts next-day AAPL return
+        6. Compute predicted next price
+        """
+        raw_data = data_service.get_latest_market_data(force_refresh=force_refresh)
+        features_df, full_df, latest_date = feature_service.compute_features(raw_data, self.features)
+
+        # Get latest observation row
+        latest_row = features_df.iloc[[-1]]
+        latest_idx = latest_row.index[-1]
+
+        # Model inference
+        predicted_return = float(self.model.predict(latest_row)[0])
+        current_price = float(full_df.loc[latest_idx, "AAPL"])
+        predicted_next_price = round(current_price * (1 + predicted_return), 2)
+        predicted_return_percent = round(predicted_return * 100, 4)
+        direction = "UP" if predicted_return > 0 else "DOWN"
+
+        # Technical indicators snapshot
+        tech_indicators = TechnicalIndicators(
+            rsi_14=round(float(full_df.loc[latest_idx, "RSI_14"]), 2),
+            macd=round(float(full_df.loc[latest_idx, "MACD"]), 4),
+            bb_position=round(float(full_df.loc[latest_idx, "BB_Position"]), 4),
+            volatility_7=round(float(full_df.loc[latest_idx, "Volatility_7"]), 5),
+            sma20_ratio=round(float(full_df.loc[latest_idx, "SMA20_Ratio"]), 4),
+            sma50_ratio=round(float(full_df.loc[latest_idx, "SMA50_Ratio"]), 4),
+            ma7_ratio=round(float(full_df.loc[latest_idx, "MA7_Ratio"]), 4),
+            ma14_ratio=round(float(full_df.loc[latest_idx, "MA14_Ratio"]), 4),
+            ma30_ratio=round(float(full_df.loc[latest_idx, "MA30_Ratio"]), 4),
+        )
+
+        # Real market context details (raw index levels & returns)
+        raw_close = raw_data["Close"]
+        market_context: Dict[str, MarketContextItem] = {}
+
+        indices_meta = [
+            ("^GSPC", "S&P 500"),
+            ("^IXIC", "NASDAQ Composite"),
+            ("^VIX", "CBOE Volatility Index"),
+            ("XLK", "Technology Select Sector SPDR")
+        ]
+
+        for ticker, name in indices_meta:
+            if ticker in raw_close.columns:
+                series = raw_close[ticker].dropna()
+                price = float(series.iloc[-1])
+                ret = float(series.pct_change().iloc[-1]) if len(series) > 1 else 0.0
+                mom5 = float(series.pct_change(5).iloc[-1]) if len(series) > 5 else 0.0
+                key = ticker.replace("^", "")
+                market_context[key] = MarketContextItem(
+                    ticker=ticker,
+                    name=name,
+                    price=round(price, 2),
+                    daily_return=round(ret, 4),
+                    daily_return_percent=round(ret * 100, 2),
+                    momentum_5=round(mom5, 4),
+                    momentum_5_percent=round(mom5 * 100, 2)
+                )
+
+        # Feature values dictionary
+        feature_vals = {feat: round(float(latest_row[feat].values[0]), 6) for feat in self.features}
+
+        return PredictionResponse(
+            ticker="AAPL",
+            current_price=round(current_price, 2),
+            predicted_return=predicted_return,
+            predicted_return_percent=predicted_return_percent,
+            predicted_next_price=predicted_next_price,
+            direction=direction,
+            as_of_date=latest_date,
+            model="XGBoost Regressor",
+            technical_indicators=tech_indicators,
+            market_context=market_context,
+            feature_values=feature_vals
+        )
+
+    def get_price_history(self, days: int = 90) -> PriceHistoryResponse:
+        aapl_history = data_service.get_aapl_history(num_points=days)
+        points: List[PriceHistoryPoint] = []
+        
+        for date_idx, row in aapl_history.iterrows():
+            d_str = date_idx.strftime("%Y-%m-%d")
+            points.append(PriceHistoryPoint(
+                date=d_str,
+                close=round(float(row["Close"]), 2),
+                sma_20=round(float(row["SMA_20"]), 2) if pd.notna(row.get("SMA_20")) else None,
+                sma_50=round(float(row["SMA_50"]), 2) if pd.notna(row.get("SMA_50")) else None,
+                high=round(float(row["High"]), 2) if pd.notna(row.get("High")) else None,
+                low=round(float(row["Low"]), 2) if pd.notna(row.get("Low")) else None,
+                open=round(float(row["Open"]), 2) if pd.notna(row.get("Open")) else None,
+                volume=float(row["Volume"]) if pd.notna(row.get("Volume")) else None
+            ))
+
+        latest_price = round(float(aapl_history["Close"].iloc[-1]), 2)
+        as_of_date = aapl_history.index[-1].strftime("%Y-%m-%d")
+
+        return PriceHistoryResponse(
+            ticker="AAPL",
+            points=points,
+            latest_price=latest_price,
+            as_of_date=as_of_date
+        )
+
+    def get_model_info(self) -> ModelInfoResponse:
+        eval_dict = self.metadata.get("evaluation", {})
+        evaluation = ModelEvaluation(
+            mae=float(eval_dict.get("mae", 0.0)),
+            rmse=float(eval_dict.get("rmse", 0.0)),
+            r2=float(eval_dict.get("r2", 0.0)),
+            directional_accuracy=float(eval_dict.get("directional_accuracy", 0.0))
+        )
+
+        explanation = {
+            "prediction_objective": "Predicts next trading day's AAPL return (percentage change) rather than raw closing price to enforce stationarity.",
+            "target_transformation": "Predicted Return is combined with latest Apple close to compute predicted next-day closing price.",
+            "feature_composition": "25 engineered features comprising multi-day lags, rolling return volatility, moving-average ratios (MA7, MA14, MA30, SMA20, SMA50), momentum, MACD, Bollinger Band position, RSI(14), and broader market context (S&P 500, NASDAQ, VIX, XLK).",
+            "market_context_rationale": "Apple does not trade in a vacuum. Broader market regimes, tech sector momentum (XLK), and volatility spikes (VIX) provide vital macroeconomic context.",
+            "stationarity_and_leakage": "All moving average and indicator calculations are lagged or shifted by 1 to strictly eliminate lookahead bias."
+        }
+
+        return ModelInfoResponse(
+            project=self.metadata.get("project", "PricePulse"),
+            ticker=self.metadata.get("ticker", "AAPL"),
+            target=self.metadata.get("target", "next_day_return"),
+            model=self.metadata.get("model", "XGBoost Regressor"),
+            hyperparameters=self.metadata.get("hyperparameters", {}),
+            features=self.features,
+            feature_count=len(self.features),
+            evaluation=evaluation,
+            explanation=explanation
+        )
+
+# Singleton instance
+prediction_service = PredictionService()

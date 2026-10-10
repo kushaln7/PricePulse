@@ -1,0 +1,47 @@
+{
+    "project": "PricePulse",
+    "ticker": "AAPL",
+    "target": "next_day_return",
+    "model": "XGBoost Regressor",
+    "hyperparameters": {
+        "n_estimators": 200,
+        "learning_rate": 0.03,
+        "max_depth": 3,
+        "subsample": 0.8,
+        "colsample_bytree": 0.8,
+        "random_state": 42
+    },
+    "features": [
+        "Lag_1",
+        "Lag_2",
+        "Lag_3",
+        "Lag_7",
+        "Return",
+        "Volatility_7",
+        "MA7_Ratio",
+        "MA14_Ratio",
+        "MA30_Ratio",
+        "SMA20_Ratio",
+        "SMA50_Ratio",
+        "MACD",
+        "BB_Position",
+        "RSI_14",
+        "SP500_Return",
+        "NASDAQ_Return",
+        "VIX_Return",
+        "XLK_Return",
+        "AAPL_vs_SP500",
+        "AAPL_vs_NASDAQ",
+        "AAPL_vs_XLK",
+        "SP500_Momentum_5",
+        "NASDAQ_Momentum_5",
+        "XLK_Momentum_5",
+        "VIX_Level"
+    ],
+    "evaluation": {
+        "mae": 0.01211694965685545,
+        "rmse": 0.018730015626421587,
+        "r2": -0.08086511215828596,
+        "directional_accuracy": 0.5192307692307693
+    }
+}
