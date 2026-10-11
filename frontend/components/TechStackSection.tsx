@@ -8,7 +8,7 @@ const TECH_ITEMS = [
   { name: "XGBoost Regressor", role: "Gradient-Boosted Decision Trees", category: "Machine Learning" },
   { name: "Scikit-Learn", role: "Metrics, Splits & Ensembles", category: "Machine Learning" },
   { name: "Pandas & NumPy", role: "Time-Series Vectorized Engineering", category: "Data Science" },
-  { name: "yfinance", role: "Real-Time Market Data Feeds", category: "Data Science" },
+  { name: "yfinance", role: "Historical & Recent Market Data Feeds", category: "Data Science" },
   { name: "FastAPI", role: "High-Performance Async REST API", category: "Backend" },
   { name: "Uvicorn", role: "ASGI Production Server", category: "Backend" },
   { name: "Next.js 16 (App Router)", role: "React Server & Client Framework", category: "Frontend" },

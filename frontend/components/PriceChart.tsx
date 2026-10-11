@@ -29,22 +29,37 @@ interface CustomTooltipProps {
   label?: string;
 }
 
+interface ChartDataPoint {
+  date: string;
+  close?: number;
+  sma_20?: number | null;
+  sma_50?: number | null;
+  forecast?: number;
+  isForecast?: boolean;
+}
+
 const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
     return (
       <div className="glass-panel p-3.5 rounded-xl border border-white/10 text-xs shadow-2xl backdrop-blur-xl">
         <p className="font-mono font-semibold text-slate-300 mb-1.5 border-b border-white/10 pb-1">
-          {label}
+          Session Date: {label}
         </p>
-        {payload.map((item, index) => (
-          <div key={index} className="flex items-center justify-between gap-4 font-mono py-0.5">
-            <span className="flex items-center gap-1.5 text-slate-400">
-              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />
-              {item.name}:
-            </span>
-            <span className="font-bold text-white">${Number(item.value).toFixed(2)}</span>
-          </div>
-        ))}
+        {payload.map((item, index) => {
+          const isForecast = item.name.includes("Forecast");
+          return (
+            <div key={index} className="flex items-center justify-between gap-4 font-mono py-0.5">
+              <span className="flex items-center gap-1.5 text-slate-400">
+                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />
+                {item.name}:
+              </span>
+              <span className={`font-bold ${isForecast ? "text-amber-400" : "text-white"}`}>
+                ${Number(item.value).toFixed(2)}
+                {isForecast && " (Est)"}
+              </span>
+            </div>
+          );
+        })}
       </div>
     );
   }
@@ -55,17 +70,37 @@ export const PriceChart: React.FC<PriceChartProps> = ({ historyPoints, predictio
   const [timeframe, setTimeframe] = useState<30 | 90 | 180 | 365>(90);
   const [showSMA, setShowSMA] = useState(true);
 
-  const filteredData = (historyPoints || []).slice(-timeframe);
+  const rawFiltered = (historyPoints || []).slice(-timeframe);
+
+  // Build chart dataset with distinct forecast extension
+  const chartData: ChartDataPoint[] = rawFiltered.map((pt) => ({
+    date: pt.date,
+    close: pt.close,
+    sma_20: pt.sma_20,
+    sma_50: pt.sma_50,
+  }));
+
+  // Append target session forecast vector if prediction is available
+  if (prediction && typeof prediction.predicted_next_price === "number" && chartData.length > 0) {
+    const lastIdx = chartData.length - 1;
+    // Set forecast starting point at the latest observed close
+    chartData[lastIdx].forecast = chartData[lastIdx].close;
+
+    // Append single forecast terminal node
+    chartData.push({
+      date: prediction.target_date,
+      forecast: prediction.predicted_next_price,
+      isForecast: true
+    });
+  }
 
   // Compute min and max for Y-Axis padding safely
-  const closes = filteredData.map((d) => d.close).filter((c) => typeof c === "number" && !isNaN(c));
+  const closes = rawFiltered.map((d) => d.close).filter((c) => typeof c === "number" && !isNaN(c));
   if (prediction && typeof prediction.predicted_next_price === "number") {
     closes.push(prediction.predicted_next_price);
   }
   const minVal = closes.length ? Math.floor(Math.min(...closes) * 0.98) : 100;
   const maxVal = closes.length ? Math.ceil(Math.max(...closes) * 1.02) : 400;
-
-  const latestPoint = filteredData[filteredData.length - 1];
 
   const timeRanges: Array<{ label: string; days: 30 | 90 | 180 | 365 }> = [
     { label: "1M", days: 30 },
@@ -88,7 +123,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({ historyPoints, predictio
             </span>
           </div>
           <p className="text-xs text-slate-400 font-light mt-1">
-            Historical closing observations overlaid with 20/50-day moving averages and the model&apos;s experimental next-session forecast.
+            Historical closing observations overlaid with 20/50-day moving averages and a distinct dashed forecast vector for the next session.
           </p>
         </div>
 
@@ -127,22 +162,18 @@ export const PriceChart: React.FC<PriceChartProps> = ({ historyPoints, predictio
 
       {/* Recharts Container */}
       <div className="w-full h-80 sm:h-96">
-        {filteredData.length === 0 ? (
+        {rawFiltered.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-slate-500 font-mono text-xs gap-3">
             <Clock className="w-8 h-8 animate-pulse text-slate-600" />
-            <span>Loading historical price trajectory from market service...</span>
+            <span>Historical market data currently unavailable from upstream provider.</span>
           </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={filteredData} margin={{ top: 10, right: 15, left: -20, bottom: 0 }}>
+            <AreaChart data={chartData} margin={{ top: 10, right: 15, left: -20, bottom: 0 }}>
               <defs>
                 <linearGradient id="priceGradient" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#10b981" stopOpacity={0.35} />
                   <stop offset="95%" stopColor="#10b981" stopOpacity={0.0} />
-                </linearGradient>
-                <linearGradient id="predictionGlow" x1="0" y1="0" x2="1" y2="0">
-                  <stop offset="0%" stopColor="#06b6d4" />
-                  <stop offset="100%" stopColor="#10b981" />
                 </linearGradient>
               </defs>
 
@@ -170,64 +201,78 @@ export const PriceChart: React.FC<PriceChartProps> = ({ historyPoints, predictio
 
               <Tooltip content={<CustomTooltip />} />
 
-            {/* AAPL Close Price Area */}
-            <Area
-              type="monotone"
-              dataKey="close"
-              name="Close Price"
-              stroke="#10b981"
-              strokeWidth={2.5}
-              fillOpacity={1}
-              fill="url(#priceGradient)"
-            />
-
-            {/* 20-day Simple Moving Average */}
-            {showSMA && (
+              {/* Observed AAPL Close Price Area */}
               <Area
                 type="monotone"
-                dataKey="sma_20"
-                name="20 SMA"
-                stroke="#06b6d4"
-                strokeWidth={1.5}
-                strokeDasharray="4 4"
-                fill="none"
+                dataKey="close"
+                name="Observed Close"
+                stroke="#10b981"
+                strokeWidth={2.5}
+                fillOpacity={1}
+                fill="url(#priceGradient)"
+                connectNulls={false}
               />
-            )}
 
-            {/* 50-day Simple Moving Average */}
-            {showSMA && (
-              <Area
-                type="monotone"
-                dataKey="sma_50"
-                name="50 SMA"
-                stroke="#8b5cf6"
-                strokeWidth={1.5}
-                strokeDasharray="2 2"
-                fill="none"
-              />
-            )}
+              {/* 20-day Simple Moving Average */}
+              {showSMA && (
+                <Area
+                  type="monotone"
+                  dataKey="sma_20"
+                  name="20 SMA"
+                  stroke="#06b6d4"
+                  strokeWidth={1.5}
+                  strokeDasharray="4 4"
+                  fill="none"
+                  connectNulls={false}
+                />
+              )}
 
-            {/* Next Day Prediction Target Dot */}
-            {prediction && latestPoint && (
-              <ReferenceDot
-                x={latestPoint.date}
-                y={prediction.predicted_next_price}
-                r={6}
-                fill={prediction.direction === "UP" ? "#10b981" : "#f43f5e"}
-                stroke="#ffffff"
-                strokeWidth={2}
-                label={{
-                  value: `PRED: $${prediction.predicted_next_price.toFixed(2)}`,
-                  position: "top",
-                  fill: prediction.direction === "UP" ? "#34d399" : "#fb7185",
-                  fontSize: 11,
-                  fontFamily: "monospace",
-                  fontWeight: "bold"
-                }}
-              />
-            )}
-          </AreaChart>
-        </ResponsiveContainer>
+              {/* 50-day Simple Moving Average */}
+              {showSMA && (
+                <Area
+                  type="monotone"
+                  dataKey="sma_50"
+                  name="50 SMA"
+                  stroke="#8b5cf6"
+                  strokeWidth={1.5}
+                  strokeDasharray="2 2"
+                  fill="none"
+                  connectNulls={false}
+                />
+              )}
+
+              {/* Distinct Dashed Forecast Vector */}
+              {prediction && (
+                <Area
+                  type="monotone"
+                  dataKey="forecast"
+                  name="Forecast Estimate"
+                  stroke="#f59e0b"
+                  strokeWidth={2}
+                  strokeDasharray="5 5"
+                  fill="none"
+                  connectNulls={true}
+                  dot={(props: any) => {
+                    const { cx, cy, index } = props;
+                    if (index === chartData.length - 1) {
+                      return (
+                        <circle
+                          key="forecast-dot"
+                          cx={cx}
+                          cy={cy}
+                          r={6}
+                          fill="#f59e0b"
+                          stroke="#ffffff"
+                          strokeWidth={2}
+                        />
+                      );
+                    }
+                    return <g key={`dot-${index}`} />;
+                  }}
+                />
+              )}
+            </AreaChart>
+          </ResponsiveContainer>
         )}
       </div>
 
@@ -257,7 +302,9 @@ export const PriceChart: React.FC<PriceChartProps> = ({ historyPoints, predictio
                   prediction.direction === "UP" ? "bg-emerald-400" : "bg-rose-400"
                 }`}
               />
-              <span className="text-white font-semibold">Predicted Next Close</span>
+              <span className="text-amber-400 font-semibold">
+                Forecast Estimate ({prediction.target_date})
+              </span>
             </div>
           )}
         </div>

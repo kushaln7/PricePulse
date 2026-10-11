@@ -65,6 +65,16 @@ All moving averages and oscillators are shifted by 1 trading session ($\text{shi
 | **Cumulative Momentum** | `SP500_Momentum_5`, `NASDAQ_Momentum_5`, `XLK_Momentum_5` | 5-day cumulative percentage return of indices |
 | **Implied Volatility Level**| `VIX_Level` | Absolute spot level of the CBOE Volatility Index |
 
+### Target Session & Calendar Computation
+To prevent predicting over weekends or market closures, PricePulse implements an explicit NYSE trading session calendar (`get_next_trading_session`):
+- Automatically advances Friday closes to the upcoming Monday session.
+- Handles all official US equity market holidays (New Year's Day, MLK Day, Washington's Birthday, Good Friday via the astronomical Meeus algorithm, Memorial Day, Juneteenth, Independence Day, Labor Day, Thanksgiving Day, and Christmas Day) with proper Friday/Monday observation shifts.
+
+### Uncertainty & Confidence Disclosure Policy
+Financial time series exhibit substantial stochastic noise. PricePulse enforces a strict transparency policy:
+- **No Fabricated Confidence Percentages**: The model outputs a continuous regression point estimate. It does NOT generate synthetic confidence scores (e.g., "94% AI confidence").
+- **Uncalibrated Uncertainty**: The system explicitly identifies that uncertainty intervals are not statistically calibrated, protecting users from false certainty.
+
 ---
 
 ## 3. Model Specifications & Authentic Evaluation

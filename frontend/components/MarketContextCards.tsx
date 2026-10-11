@@ -105,11 +105,11 @@ export const MarketContextCards: React.FC<MarketContextProps> = ({ marketContext
                 {/* Live Value Display */}
                 <div className="mt-4 pt-3 border-t border-white/5 flex items-baseline justify-between">
                   <div>
-                    <span className="text-2xl font-black text-white font-mono">
-                      {item ? item.price.toLocaleString(undefined, { minimumFractionDigits: 2 }) : "Unavailable"}
+                    <span className={`font-black font-mono ${item ? "text-2xl text-white" : "text-base text-slate-500"}`}>
+                      {item ? `$${item.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "Price unavailable"}
                     </span>
                   </div>
-                  {item && (
+                  {item ? (
                     <div
                       className={`inline-flex items-center gap-1 font-mono text-xs font-bold px-2 py-0.5 rounded-md ${
                         isPositive
@@ -127,28 +127,38 @@ export const MarketContextCards: React.FC<MarketContextProps> = ({ marketContext
                         {item.daily_return_percent.toFixed(2)}%
                       </span>
                     </div>
+                  ) : (
+                    <span className="text-[10px] font-mono text-slate-500 bg-white/[0.02] px-2 py-0.5 rounded border border-white/5">
+                      Change pending
+                    </span>
                   )}
                 </div>
 
                 {/* 5-day Momentum */}
-                {item && item.momentum_5_percent !== undefined && (
-                  <div className="mt-2 text-[11px] font-mono text-slate-400 flex items-center justify-between">
-                    <span>5D Momentum:</span>
+                <div className="mt-2 text-[11px] font-mono text-slate-400 flex items-center justify-between">
+                  <span>5D Momentum:</span>
+                  {item && item.momentum_5_percent !== undefined ? (
                     <span
                       className={
-                        item.momentum_5_percent >= 0 ? "text-emerald-400" : "text-rose-400"
+                        item.momentum_5_percent >= 0 ? "text-emerald-400 font-semibold" : "text-rose-400 font-semibold"
                       }
                     >
                       {item.momentum_5_percent >= 0 ? "+" : ""}
                       {item.momentum_5_percent.toFixed(2)}%
                     </span>
-                  </div>
-                )}
+                  ) : (
+                    <span className="text-slate-500">Unavailable</span>
+                  )}
+                </div>
 
                 {/* Timestamp & Freshness Status */}
                 <div className="mt-3 flex items-center justify-between text-[10px] font-mono text-slate-500">
-                  <span>As of: {item?.as_of_date || "Market Close"}</span>
-                  <span className="text-emerald-400/80">● Upstream Valid</span>
+                  <span>As of: {item?.as_of_date || "Pending feed"}</span>
+                  {item ? (
+                    <span className="text-emerald-400/80">● Feed Active</span>
+                  ) : (
+                    <span className="text-rose-400/80">○ Data Unavailable</span>
+                  )}
                 </div>
               </div>
 
