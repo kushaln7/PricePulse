@@ -96,9 +96,28 @@ Metrics are reported directly from `pricepulse_metadata.json` evaluated chronolo
 | **Directional Accuracy** | `51.92%` | Correctly predicts market direction (+/-) 51.92% of the time, exceeding 50% random walk |
 | **$R^2$ Score** | `-0.0809` | Typical for daily equity returns due to high stochastic newsflow |
 
+### Model Comparison Table (Test Set)
+| Model | MAE | RMSE | $R^2$ | Directional Accuracy |
+|---|---|---|---|---|
+| **Naive Baseline** | `0.011789` | `0.018039` | `-0.002602` | N/A (predicts zero return) |
+| **Old XGBoost (15 Features)** | `0.012770` | `0.019645` | `-0.082560` | `52.26%` |
+| **Improved XGBoost (25 Features)** | `0.012117` | `0.018730` | `-0.080865` | `51.92%` |
+
 ---
 
-## 4. Project Structure
+## 4. API Endpoints Specification
+
+| Method | Endpoint | Query Parameters | Description |
+|---|---|---|---|
+| `GET` | `/` | None | Root status and project info |
+| `GET` | `/health` | None | Health check verifying model integrity, feature count (25), and system timestamp |
+| `GET`, `POST` | `/predict` | `force_refresh` (bool, default `false`) | Runs live inference: downloads latest market feeds, computes 25 features, predicts next-day return & projected price |
+| `GET` | `/history` | `days` (int, 10–365, default `90`) | Returns historical AAPL price points with 20-day and 50-day SMAs |
+| `GET` | `/model-info` | None | Model transparency: hyperparameters, exact evaluation metrics, and feature catalog |
+
+---
+
+## 5. Project Structure
 
 ```
 PricePulse/
@@ -117,6 +136,11 @@ PricePulse/
 │   │   └── prediction_service.py   # Model inference & state management
 │   └── schemas/
 │       └── prediction.py           # Pydantic request/response schemas
+│
+├── models/                         # Project root model artifacts
+│   ├── pricepulse_improved_xgb_model.joblib
+│   ├── pricepulse_improved_features.joblib
+│   └── pricepulse_metadata.json
 │
 ├── frontend/
 │   ├── app/
@@ -161,7 +185,7 @@ PricePulse/
 
 ---
 
-## 5. Running Locally
+## 6. Running Locally
 
 ### Step 1: Clone Repository & Setup Backend
 ```bash
@@ -192,11 +216,11 @@ Open `http://localhost:3000` in your browser.
 
 ---
 
-## 6. Deployment Guide
+## 7. Deployment Guide
 
 ### Backend Deployment (Render)
-1. Push code to GitHub.
-2. In Render dashboard, create a new **Web Service**.
+1. In Render dashboard, create a new **Web Service**.
+2. Connect your Git repository.
 3. Set **Root Directory** to `backend`.
 4. Set **Build Command** to:
    ```bash
@@ -206,18 +230,30 @@ Open `http://localhost:3000` in your browser.
    ```bash
    uvicorn main:app --host 0.0.0.0 --port $PORT
    ```
-6. Add Environment Variable:
+6. Add Environment Variables:
    - `ALLOWED_ORIGINS`: `https://your-frontend-deployment.vercel.app`
+   - `PORT`: (auto-assigned by Render)
+7. Health Check Path: `/health`.
 
 ### Frontend Deployment (Vercel)
 1. In Vercel dashboard, import your repository.
 2. Set **Root Directory** to `frontend`.
-3. Set Environment Variable:
+3. Framework Preset: **Next.js**.
+4. Set Environment Variable:
    - `NEXT_PUBLIC_API_URL`: `https://your-backend-service.onrender.com`
-4. Deploy.
+5. Deploy.
 
 ---
 
-## 7. Disclaimer
+## 8. Known Limitations
+
+1. **Single Stock Focus (AAPL)**: The model architecture, feature distributions, and macroeconomic context cross-assets were trained exclusively on Apple Inc. (`AAPL`). It should not be applied to other arbitrary tickers without re-training and feature engineering validation.
+2. **Horizon**: PricePulse is designed strictly for next-trading-day return estimation ($t+1$). It does not model multi-week, monthly, or intraday price action.
+3. **Market Regimes & Black Swans**: While macroeconomic indices (S&P 500, NASDAQ, VIX, XLK) provide broader market context, extreme exogenous events (earnings releases, geopolitical shocks, unexpected regulatory actions) introduce stochastic variance that cannot be captured by technical price action alone.
+4. **Upstream Data Availability**: Relies on Yahoo Finance (`yfinance`) feeds which are subject to upstream rate limits and exchange market holiday calendars.
+
+---
+
+## 9. Disclaimer
 
 PricePulse provides machine-learning-based estimates for educational and research purposes only. It does not constitute financial advice, investment counsel, or an endorsement to buy or sell securities. Past model performance on historical test sets does not guarantee future market returns.

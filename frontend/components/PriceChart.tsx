@@ -118,41 +118,48 @@ export const PriceChart: React.FC<PriceChartProps> = ({ historyPoints, predictio
 
       {/* Recharts Container */}
       <div className="w-full h-80 sm:h-96">
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={filteredData} margin={{ top: 10, right: 15, left: -20, bottom: 0 }}>
-            <defs>
-              <linearGradient id="priceGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#10b981" stopOpacity={0.35} />
-                <stop offset="95%" stopColor="#10b981" stopOpacity={0.0} />
-              </linearGradient>
-              <linearGradient id="predictionGlow" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stopColor="#06b6d4" />
-                <stop offset="100%" stopColor="#10b981" />
-              </linearGradient>
-            </defs>
+        {filteredData.length === 0 ? (
+          <div className="h-full flex flex-col items-center justify-center text-slate-500 font-mono text-xs gap-3">
+            <Clock className="w-8 h-8 animate-pulse text-slate-600" />
+            <span>Loading historical price trajectory from market service...</span>
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={filteredData} margin={{ top: 10, right: 15, left: -20, bottom: 0 }}>
+              <defs>
+                <linearGradient id="priceGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.35} />
+                  <stop offset="95%" stopColor="#10b981" stopOpacity={0.0} />
+                </linearGradient>
+                <linearGradient id="predictionGlow" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stopColor="#06b6d4" />
+                  <stop offset="100%" stopColor="#10b981" />
+                </linearGradient>
+              </defs>
 
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
 
-            <XAxis
-              dataKey="date"
-              stroke="#64748b"
-              fontSize={11}
-              tickLine={false}
-              tickFormatter={(val) => {
-                const parts = val.split("-");
-                return `${parts[1]}/${parts[2]}`;
-              }}
-            />
+              <XAxis
+                dataKey="date"
+                stroke="#64748b"
+                fontSize={11}
+                tickLine={false}
+                tickFormatter={(val) => {
+                  if (!val || typeof val !== "string") return "";
+                  const parts = val.split("-");
+                  return parts.length >= 3 ? `${parts[1]}/${parts[2]}` : val;
+                }}
+              />
 
-            <YAxis
-              domain={[minVal, maxVal]}
-              stroke="#64748b"
-              fontSize={11}
-              tickLine={false}
-              tickFormatter={(v) => `$${v}`}
-            />
+              <YAxis
+                domain={[minVal, maxVal]}
+                stroke="#64748b"
+                fontSize={11}
+                tickLine={false}
+                tickFormatter={(v) => `$${v}`}
+              />
 
-            <Tooltip content={<CustomTooltip />} />
+              <Tooltip content={<CustomTooltip />} />
 
             {/* AAPL Close Price Area */}
             <Area
@@ -212,6 +219,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({ historyPoints, predictio
             )}
           </AreaChart>
         </ResponsiveContainer>
+        )}
       </div>
 
       {/* Chart Sub-legend */}

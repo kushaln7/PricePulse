@@ -1,8 +1,15 @@
+import os
+import sys
 import logging
 import time
 from typing import Dict, Any, Optional
 import pandas as pd
 import yfinance as yf
+
+# Ensure backend root is in sys.path
+backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if backend_dir not in sys.path:
+    sys.path.insert(0, backend_dir)
 
 logger = logging.getLogger("pricepulse.data_service")
 
@@ -71,10 +78,14 @@ class DataService:
             elif col in raw_data and "AAPL" in raw_data[col]:
                 aapl_df[col] = raw_data[col]["AAPL"]
 
+        # Drop non-trading days where Close is NaN, sort chronologically
+        aapl_df = aapl_df.dropna(subset=["Close"]).sort_index()
+
+        # Compute moving averages on clean trading sessions
         aapl_df["SMA_20"] = aapl_df["Close"].rolling(20).mean()
         aapl_df["SMA_50"] = aapl_df["Close"].rolling(50).mean()
 
-        return aapl_df.dropna(subset=["Close"]).tail(num_points)
+        return aapl_df.tail(num_points)
 
 # Singleton instance
 data_service = DataService()

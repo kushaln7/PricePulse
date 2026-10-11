@@ -1,7 +1,14 @@
 import os
+import sys
 import logging
 from datetime import datetime, timezone
 from typing import Optional
+
+# Ensure backend root is always in Python module search path
+backend_dir = os.path.dirname(os.path.abspath(__file__))
+if backend_dir not in sys.path:
+    sys.path.insert(0, backend_dir)
+
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -29,7 +36,7 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
-# CORS configuration
+# CORS configuration: explicit allowed frontend origins (no wildcard with credentials)
 allowed_origins_env = os.getenv("ALLOWED_ORIGINS", "")
 if allowed_origins_env:
     origins = [orig.strip() for orig in allowed_origins_env.split(",") if orig.strip()]
@@ -37,8 +44,7 @@ else:
     origins = [
         "http://localhost:3000",
         "http://127.0.0.1:3000",
-        "https://pricepulse.vercel.app",
-        "*"
+        "https://pricepulse.vercel.app"
     ]
 
 app.add_middleware(
@@ -67,8 +73,9 @@ def health():
     try:
         is_loaded = prediction_service.model is not None
         feat_count = len(prediction_service.features)
+        is_healthy = is_loaded and feat_count == 25 and hasattr(prediction_service.model, "predict")
         return HealthResponse(
-            status="healthy" if is_loaded and feat_count == 25 else "degraded",
+            status="healthy" if is_healthy else "degraded",
             model_loaded=is_loaded,
             features_count=feat_count,
             timestamp=datetime.now(timezone.utc).isoformat(),
@@ -84,7 +91,7 @@ def health():
             project="PricePulse"
         )
 
-@app.get("/predict", response_model=PredictionResponse, tags=["Inference"])
+@app.api_route("/predict", methods=["GET", "POST"], response_model=PredictionResponse, tags=["Inference"])
 def predict(force_refresh: bool = Query(False, description="Force re-download fresh market data")):
     """
     Executes live inference pipeline:

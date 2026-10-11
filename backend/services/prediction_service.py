@@ -1,10 +1,16 @@
 import os
+import sys
 import json
 import logging
 from typing import Dict, Any, List, Optional
 import joblib
 import pandas as pd
 import numpy as np
+
+# Ensure backend root is always in sys.path
+backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if backend_dir not in sys.path:
+    sys.path.insert(0, backend_dir)
 
 from services.data_service import data_service
 from services.feature_service import feature_service
@@ -36,24 +42,43 @@ class PredictionService:
         self.load_artifacts()
 
     def load_artifacts(self):
-        logger.info(f"Loading ML artifacts from: {MODELS_DIR}")
-        
-        if not os.path.exists(MODEL_PATH):
-            raise FileNotFoundError(f"Model file not found at {MODEL_PATH}")
-        if not os.path.exists(FEATURES_PATH):
-            raise FileNotFoundError(f"Features file not found at {FEATURES_PATH}")
-        if not os.path.exists(METADATA_PATH):
-            raise FileNotFoundError(f"Metadata file not found at {METADATA_PATH}")
+        # Search candidate locations for model artifacts
+        candidates = [
+            MODELS_DIR,
+            os.path.join(os.path.dirname(BASE_DIR), "models"),
+            os.path.abspath("models"),
+            os.path.abspath("backend/models")
+        ]
 
-        self.model = joblib.load(MODEL_PATH)
-        self.features = joblib.load(FEATURES_PATH)
-        
-        with open(METADATA_PATH, "r", encoding="utf-8") as f:
+        active_models_dir = None
+        for cand in candidates:
+            if (
+                os.path.exists(os.path.join(cand, "pricepulse_improved_xgb_model.joblib")) and
+                os.path.exists(os.path.join(cand, "pricepulse_improved_features.joblib")) and
+                os.path.exists(os.path.join(cand, "pricepulse_metadata.json"))
+            ):
+                active_models_dir = cand
+                break
+
+        if not active_models_dir:
+            raise FileNotFoundError(
+                f"Model artifacts not found. Checked candidate paths: {candidates}"
+            )
+
+        logger.info(f"Loading ML artifacts from: {active_models_dir}")
+        model_file = os.path.join(active_models_dir, "pricepulse_improved_xgb_model.joblib")
+        features_file = os.path.join(active_models_dir, "pricepulse_improved_features.joblib")
+        metadata_file = os.path.join(active_models_dir, "pricepulse_metadata.json")
+
+        self.model = joblib.load(model_file)
+        self.features = joblib.load(features_file)
+
+        with open(metadata_file, "r", encoding="utf-8") as f:
             self.metadata = json.load(f)
 
         logger.info(f"Loaded model: {type(self.model).__name__}")
         logger.info(f"Loaded {len(self.features)} features: {self.features}")
-        
+
         # Verify feature order and names match the model
         if hasattr(self.model, "feature_names_in_"):
             model_feat = list(self.model.feature_names_in_)
@@ -159,6 +184,14 @@ class PredictionService:
                 open=round(float(row["Open"]), 2) if pd.notna(row.get("Open")) else None,
                 volume=float(row["Volume"]) if pd.notna(row.get("Volume")) else None
             ))
+
+        if aapl_history.empty:
+            return PriceHistoryResponse(
+                ticker="AAPL",
+                points=[],
+                latest_price=0.0,
+                as_of_date=pd.Timestamp.now().strftime("%Y-%m-%d")
+            )
 
         latest_price = round(float(aapl_history["Close"].iloc[-1]), 2)
         as_of_date = aapl_history.index[-1].strftime("%Y-%m-%d")

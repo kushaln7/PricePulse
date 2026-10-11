@@ -1,7 +1,14 @@
+import os
+import sys
 import logging
 from typing import Tuple, Dict, Any, List
 import pandas as pd
 import numpy as np
+
+# Ensure backend root is in sys.path
+backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if backend_dir not in sys.path:
+    sys.path.insert(0, backend_dir)
 
 logger = logging.getLogger("pricepulse.feature_service")
 
@@ -28,16 +35,22 @@ class FeatureService:
         # The notebook assigned close.columns = ["AAPL", "SP500", "NASDAQ", "VIX", "XLK"].
         # To guarantee 100% exact parity regardless of yfinance version, reindex to that exact order:
         expected_raw_order = ["AAPL", "XLK", "^GSPC", "^IXIC", "^VIX"]
-        available_cols = [c for c in expected_raw_order if c in raw_close.columns]
-        
-        if len(available_cols) != len(expected_raw_order):
-            # Fallback if tickers are formatted without symbols
-            logger.warning(f"Columns in raw close: {list(raw_close.columns)}. Reindexing best effort.")
-            close = raw_close.copy()
-        else:
-            close = raw_close[expected_raw_order].copy()
+        missing_tickers = [c for c in expected_raw_order if c not in raw_close.columns]
+        if missing_tickers:
+            raise ValueError(
+                f"Missing required market ticker data: {missing_tickers}. Upstream provider did not return all necessary symbols."
+            )
 
+        close = raw_close[expected_raw_order].copy()
         close.columns = ["AAPL", "SP500", "NASDAQ", "VIX", "XLK"]
+
+        # Ensure strict chronological order
+        close = close.sort_index()
+
+        # Clean non-trading sessions where AAPL did not trade (e.g. market holidays)
+        close = close.dropna(subset=["AAPL"])
+        # Forward-fill any brief single-symbol index anomalies, then drop remaining gaps
+        close = close.ffill().dropna()
 
         # 1. Target return (for inspection/alignment)
         close["Target_Return"] = close["AAPL"].shift(-1) / close["AAPL"] - 1
@@ -59,9 +72,9 @@ class FeatureService:
         close["MA_14"] = close["AAPL"].shift(1).rolling(14).mean()
         close["MA_30"] = close["AAPL"].shift(1).rolling(30).mean()
 
-        close["MA7_Ratio"] = close["AAPL"] / close["MA_7"]
-        close["MA14_Ratio"] = close["AAPL"] / close["MA_14"]
-        close["MA30_Ratio"] = close["AAPL"] / close["MA_30"]
+        close["MA7_Ratio"] = close["AAPL"] / close["MA_7"].replace(0, np.nan)
+        close["MA14_Ratio"] = close["AAPL"] / close["MA_14"].replace(0, np.nan)
+        close["MA30_Ratio"] = close["AAPL"] / close["MA_30"].replace(0, np.nan)
 
         # 6. SMA and EMA features
         close["SMA_20"] = close["AAPL"].shift(1).rolling(20).mean()
@@ -70,8 +83,8 @@ class FeatureService:
         close["EMA_12"] = close["AAPL"].shift(1).ewm(span=12, adjust=False).mean()
         close["EMA_26"] = close["AAPL"].shift(1).ewm(span=26, adjust=False).mean()
 
-        close["SMA20_Ratio"] = close["AAPL"] / close["SMA_20"]
-        close["SMA50_Ratio"] = close["AAPL"] / close["SMA_50"]
+        close["SMA20_Ratio"] = close["AAPL"] / close["SMA_20"].replace(0, np.nan)
+        close["SMA50_Ratio"] = close["AAPL"] / close["SMA_50"].replace(0, np.nan)
         close["MACD"] = close["EMA_12"] - close["EMA_26"]
 
         # 7. Bollinger Bands (20-day, 2 std)
@@ -94,6 +107,9 @@ class FeatureService:
         avg_loss = loss.shift(1).rolling(14).mean()
         rs = avg_gain / avg_loss.replace(0, np.nan)
         close["RSI_14"] = 100 - (100 / (1 + rs))
+        close.loc[(avg_loss == 0) & (avg_gain > 0), "RSI_14"] = 100.0
+        close.loc[(avg_gain == 0) & (avg_loss > 0), "RSI_14"] = 0.0
+        close.loc[(avg_gain == 0) & (avg_loss == 0), "RSI_14"] = 50.0
 
         # 9. Market Returns
         close["SP500_Return"] = close["SP500"].pct_change()
@@ -119,7 +135,7 @@ class FeatureService:
         if missing:
             raise ValueError(f"Failed to generate required features: {missing}")
 
-        features_df = close[feature_names].dropna()
+        features_df = close[feature_names].replace([np.inf, -np.inf], np.nan).dropna()
         if features_df.empty:
             raise ValueError("No valid rows remaining after feature engineering and dropna.")
 

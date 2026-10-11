@@ -1,6 +1,8 @@
 import { PredictionResponse, PriceHistoryResponse, ModelInfoResponse, HealthResponse } from "@/types/api";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+// Clean trailing slashes to prevent double-slash paths (e.g., https://api.render.com//predict)
+const API_BASE_URL = rawApiUrl.replace(/\/+$/, "");
 
 export async function fetchHealth(): Promise<HealthResponse> {
   const res = await fetch(`${API_BASE_URL}/health`, {

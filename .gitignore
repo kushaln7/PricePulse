@@ -1,20 +1,37 @@
 # Python
 __pycache__/
 *.py[cod]
+*$py.class
 .ipynb_checkpoints/
+.pytest_cache/
 
 # Virtual environments
 venv/
 .env/
 .venv/
+env/
 
 # Secrets
 .env
 .env.*
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+!.env.example
+!**/.env.example
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+build/
+dist/
 
 # IDE
 .vscode/
+.idea/
 
 # OS
 .DS_Store
-Thumbs.db
+Thumbs.db
