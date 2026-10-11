@@ -5,20 +5,23 @@ import { Activity, ShieldCheck, Terminal } from "lucide-react";
 
 export const DisclaimerFooter: React.FC = () => {
   return (
-    <footer className="border-t border-white/10 bg-[#010206] py-16 px-4 sm:px-6 lg:px-8">
+    <footer id="about-disclaimer" className="border-t border-white/10 bg-[#010206] py-16 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto flex flex-col gap-10">
         {/* Main Disclaimer Banner */}
-        <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-white/10">
+        <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-amber-500/30 bg-amber-950/[0.08]">
           <div className="flex items-start gap-4">
-            <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 shrink-0 mt-0.5">
-              <ShieldCheck className="w-5 h-5" />
+            <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-400 shrink-0 mt-0.5">
+              <ShieldCheck className="w-6 h-6" />
             </div>
             <div>
-              <h4 className="text-sm font-bold text-white uppercase tracking-wider font-mono">
-                REGULATORY & RESEARCH DISCLAIMER
+              <h4 className="text-base font-bold text-white uppercase tracking-wider font-mono">
+                EDUCATIONAL & RESEARCH DISCLAIMER
               </h4>
-              <p className="text-xs sm:text-sm text-slate-300 font-light mt-1.5 leading-relaxed">
-                PricePulse provides machine-learning-based estimates for educational and research purposes only. It is not financial advice, investment counsel, or an endorsement to buy or sell securities. Financial markets carry substantial risk of loss, and past model evaluation does not guarantee future market performance.
+              <p className="text-sm text-slate-200 font-light mt-2 leading-relaxed">
+                PricePulse is an educational market-analysis project. Its model outputs are experimental estimates based on historical data and selected features. They are not guarantees of future performance or financial advice.
+              </p>
+              <p className="text-xs text-slate-400 font-light mt-2">
+                This software is intended solely for machine learning research and portfolio demonstration. No content on this platform constitutes financial, tax, or investment advice.
               </p>
             </div>
           </div>

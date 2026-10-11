@@ -18,6 +18,7 @@ export interface MarketContextItem {
   daily_return_percent: number;
   momentum_5?: number;
   momentum_5_percent?: number;
+  as_of_date?: string;
 }
 
 export interface PredictionResponse {
@@ -28,6 +29,13 @@ export interface PredictionResponse {
   predicted_next_price: number;
   direction: "UP" | "DOWN";
   as_of_date: string;
+  target_date: string;
+  market_data_timestamp: string;
+  prediction_timestamp: string;
+  is_cached?: boolean;
+  model_status?: string;
+  uncertainty_calibrated?: boolean;
+  uncertainty_note?: string;
   model: string;
   technical_indicators: TechnicalIndicators;
   market_context: Record<string, MarketContextItem>;
@@ -53,11 +61,40 @@ export interface PriceHistoryResponse {
   as_of_date: string;
 }
 
+export interface BaselineEvaluation {
+  name: string;
+  mae: number;
+  rmse: number;
+  r2: number;
+  directional_accuracy?: number | null;
+}
+
+export interface PreviousModelEvaluation {
+  name: string;
+  features_count: number;
+  mae: number;
+  rmse: number;
+  r2: number;
+  directional_accuracy: number;
+}
+
+export interface EvaluationSplit {
+  method: string;
+  train_period: string;
+  test_period: string;
+  train_observations: number;
+  test_observations: number;
+  total_observations: number;
+}
+
 export interface ModelEvaluation {
   mae: number;
   rmse: number;
   r2: number;
   directional_accuracy: number;
+  baseline?: BaselineEvaluation;
+  previous_model?: PreviousModelEvaluation;
+  evaluation_split?: EvaluationSplit;
 }
 
 export interface ModelInfoResponse {

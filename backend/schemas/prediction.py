@@ -20,6 +20,7 @@ class MarketContextItem(BaseModel):
     daily_return_percent: float
     momentum_5: Optional[float] = None
     momentum_5_percent: Optional[float] = None
+    as_of_date: Optional[str] = None
 
 class PredictionResponse(BaseModel):
     ticker: str = "AAPL"
@@ -29,13 +30,24 @@ class PredictionResponse(BaseModel):
     predicted_next_price: float
     direction: str  # "UP" or "DOWN"
     as_of_date: str
+    target_date: str
+    market_data_timestamp: str
+    prediction_timestamp: str
+    is_cached: bool = False
+    model_status: str = "operational"
+    uncertainty_calibrated: bool = False
+    uncertainty_note: str = (
+        "Point estimate. Uncertainty is not statistically calibrated; "
+        "next-session financial return intervals are subject to high market noise."
+    )
     model: str = "XGBoost Regressor"
     technical_indicators: TechnicalIndicators
     market_context: Dict[str, MarketContextItem]
     feature_values: Dict[str, float]
     disclaimer: str = (
-        "PricePulse provides machine-learning-based estimates for educational and research purposes only. "
-        "It is not financial advice and does not guarantee future market performance."
+        "PricePulse is an educational market-analysis project. Its model outputs are experimental "
+        "estimates based on historical data and selected features. They are not guarantees of "
+        "future performance or financial advice."
     )
 
 class PriceHistoryPoint(BaseModel):
@@ -59,6 +71,9 @@ class ModelEvaluation(BaseModel):
     rmse: float
     r2: float
     directional_accuracy: float
+    baseline: Optional[Dict[str, Any]] = None
+    previous_model: Optional[Dict[str, Any]] = None
+    evaluation_split: Optional[Dict[str, Any]] = None
 
 class ModelInfoResponse(BaseModel):
     project: str

@@ -77,6 +77,17 @@ export const Preloader: React.FC<{ onComplete?: () => void }> = ({ onComplete })
           <span className="truncate pr-2">{statusText}</span>
           <span className="text-emerald-400 font-semibold">{progress}%</span>
         </div>
+
+        {/* Skip button for rapid accessibility */}
+        <button
+          onClick={() => {
+            setVisible(false);
+            if (onComplete) onComplete();
+          }}
+          className="mt-6 text-xs font-mono text-slate-500 hover:text-emerald-400 transition-colors cursor-pointer"
+        >
+          Skip Intro →
+        </button>
       </div>
     </div>
   );

@@ -144,9 +144,17 @@ function MarketDataCore() {
 
 export const CinematicHero: React.FC = () => {
   const [mounted, setMounted] = useState(false);
+  const [hasWebGL, setHasWebGL] = useState(true);
 
   useEffect(() => {
     setMounted(true);
+    try {
+      const canvas = document.createElement("canvas");
+      const gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
+      setHasWebGL(Boolean(gl));
+    } catch {
+      setHasWebGL(false);
+    }
   }, []);
 
   const scrollTo = (id: string) => {
@@ -160,9 +168,9 @@ export const CinematicHero: React.FC = () => {
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-emerald-500/10 rounded-full blur-[140px] pointer-events-none" />
       <div className="absolute top-1/3 left-1/4 w-[400px] h-[400px] bg-cyan-500/10 rounded-full blur-[120px] pointer-events-none" />
 
-      {/* 3D Canvas Background */}
+      {/* 3D Canvas Background with WebGL fallback */}
       <div className="absolute inset-0 pointer-events-none opacity-80 z-0">
-        {mounted && (
+        {mounted && hasWebGL ? (
           <Canvas
             camera={{ position: [0, 0, 7.5], fov: 45 }}
             gl={{ antialias: true, alpha: true }}
@@ -170,6 +178,8 @@ export const CinematicHero: React.FC = () => {
             <ambientLight intensity={0.5} />
             <MarketDataCore />
           </Canvas>
+        ) : (
+          <div className="w-full h-full bg-grid-pattern opacity-20" />
         )}
       </div>
 
@@ -178,36 +188,35 @@ export const CinematicHero: React.FC = () => {
         {/* Subtitle Badge */}
         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-900/90 border border-emerald-500/30 text-emerald-400 text-xs font-mono mb-8 backdrop-blur-md shadow-lg shadow-emerald-950/40">
           <Sparkles className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
-          <span className="tracking-wide">AI-POWERED SHORT-TERM MARKET PREDICTION</span>
+          <span className="tracking-wide">QUANTITATIVE MACHINE LEARNING PLATFORM</span>
         </div>
 
-        {/* Hero Title */}
+        {/* Hero Title - Exact Phase 3 Section B requirement */}
         <h1 className="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-white max-w-4xl mb-6 leading-[1.12]">
-          Predicting tomorrow&apos;s market,{" "}
+          PricePulse —{" "}
           <span className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400">
-            using today&apos;s data.
+            AI-Powered Market Analysis
           </span>
         </h1>
 
-        {/* Supporting Message */}
+        {/* Supporting Message - Exact Phase 3 Section B requirement */}
         <p className="text-base sm:text-lg md:text-xl text-slate-300 max-w-2xl mb-10 leading-relaxed font-light">
-          PricePulse analyzes historical price action, technical signals, and broader market context
-          to estimate the next trading day&apos;s AAPL movement with a trained XGBoost Regressor.
+          Explore historical market behavior, technical indicators, and experimental machine-learning estimates for the next trading session.
         </p>
 
-        {/* Call to Actions */}
+        {/* Call to Actions - Exact Phase 3 Section B requirement */}
         <div className="flex flex-col sm:flex-row items-center gap-4 mb-16">
           <button
             onClick={() => scrollTo("prediction-dashboard")}
             className="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-bold text-sm tracking-wide uppercase shadow-xl shadow-emerald-500/25 transition-all transform hover:-translate-y-0.5 active:scale-95 cursor-pointer"
           >
-            Launch Prediction Dashboard
+            Explore Dashboard
           </button>
           <button
-            onClick={() => scrollTo("cinematic-story")}
+            onClick={() => scrollTo("model-architecture")}
             className="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-700 hover:border-slate-600 text-slate-200 font-semibold text-sm transition-all cursor-pointer backdrop-blur-md"
           >
-            Experience Cinematic Pipeline
+            How the Model Works
           </button>
         </div>
 
@@ -215,7 +224,7 @@ export const CinematicHero: React.FC = () => {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 w-full max-w-3xl">
           <div className="glass-panel p-3 rounded-xl border border-white/5 text-center">
             <span className="text-[10px] uppercase font-mono tracking-wider text-slate-400">INPUT STAGE</span>
-            <p className="text-xs font-bold text-slate-200 mt-1">Multi-Asset Data</p>
+            <p className="text-xs font-bold text-slate-200 mt-1">Multi-Asset Feeds</p>
           </div>
           <div className="glass-panel p-3 rounded-xl border border-white/5 text-center">
             <span className="text-[10px] uppercase font-mono tracking-wider text-slate-400">FEATURE LAYER</span>
@@ -227,21 +236,28 @@ export const CinematicHero: React.FC = () => {
           </div>
           <div className="glass-panel p-3 rounded-xl border border-white/5 text-center">
             <span className="text-[10px] uppercase font-mono tracking-wider text-slate-400">OUTPUT TARGET</span>
-            <p className="text-xs font-bold text-emerald-400 mt-1">Next-Day Return</p>
+            <p className="text-xs font-bold text-emerald-400 mt-1">Next-Session Return</p>
           </div>
         </div>
 
-        {/* Scroll Prompt */}
-        <button
-          onClick={() => scrollTo("cinematic-story")}
-          className="mt-14 flex flex-col items-center text-slate-500 hover:text-emerald-400 transition-colors cursor-pointer group"
-          aria-label="Scroll to cinematic story"
-        >
-          <span className="text-[11px] font-mono uppercase tracking-widest mb-1.5 group-hover:translate-y-0.5 transition-transform">
-            SCROLL TO EXPLORE
-          </span>
-          <ArrowDown className="w-4 h-4 animate-bounce text-slate-400 group-hover:text-emerald-400" />
-        </button>
+        {/* Fast Access & Scroll Prompt */}
+        <div className="mt-12 flex flex-col sm:flex-row items-center gap-4 text-xs font-mono text-slate-400">
+          <button
+            onClick={() => scrollTo("prediction-dashboard")}
+            className="text-emerald-400 hover:underline flex items-center gap-1 cursor-pointer"
+          >
+            <span>Skip story directly to live dashboard →</span>
+          </button>
+          <span className="hidden sm:inline text-slate-700">•</span>
+          <button
+            onClick={() => scrollTo("cinematic-story")}
+            className="flex items-center gap-1.5 text-slate-400 hover:text-white transition-colors cursor-pointer group"
+            aria-label="Scroll to cinematic story"
+          >
+            <span>Scroll to explore ML progression</span>
+            <ArrowDown className="w-3.5 h-3.5 group-hover:translate-y-0.5 transition-transform text-emerald-400" />
+          </button>
+        </div>
       </div>
     </section>
   );

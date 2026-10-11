@@ -52,18 +52,27 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label })
 };
 
 export const PriceChart: React.FC<PriceChartProps> = ({ historyPoints, prediction }) => {
-  const [timeframe, setTimeframe] = useState<30 | 60 | 90>(60);
+  const [timeframe, setTimeframe] = useState<30 | 90 | 180 | 365>(90);
   const [showSMA, setShowSMA] = useState(true);
 
-  const filteredData = historyPoints.slice(-timeframe);
+  const filteredData = (historyPoints || []).slice(-timeframe);
 
-  // Compute min and max for Y-Axis padding
-  const closes = filteredData.map((d) => d.close);
-  if (prediction) closes.push(prediction.predicted_next_price);
-  const minVal = closes.length ? Math.floor(Math.min(...closes) * 0.98) : 0;
-  const maxVal = closes.length ? Math.ceil(Math.max(...closes) * 1.02) : 300;
+  // Compute min and max for Y-Axis padding safely
+  const closes = filteredData.map((d) => d.close).filter((c) => typeof c === "number" && !isNaN(c));
+  if (prediction && typeof prediction.predicted_next_price === "number") {
+    closes.push(prediction.predicted_next_price);
+  }
+  const minVal = closes.length ? Math.floor(Math.min(...closes) * 0.98) : 100;
+  const maxVal = closes.length ? Math.ceil(Math.max(...closes) * 1.02) : 400;
 
   const latestPoint = filteredData[filteredData.length - 1];
+
+  const timeRanges: Array<{ label: string; days: 30 | 90 | 180 | 365 }> = [
+    { label: "1M", days: 30 },
+    { label: "3M", days: 90 },
+    { label: "6M", days: 180 },
+    { label: "1Y", days: 365 },
+  ];
 
   return (
     <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-white/10">
@@ -75,11 +84,11 @@ export const PriceChart: React.FC<PriceChartProps> = ({ historyPoints, predictio
               AAPL Price Trajectory & Forecast Projection
             </h3>
             <span className="px-2 py-0.5 rounded text-[11px] font-mono bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
-              DAILY
+              DAILY INTERVAL
             </span>
           </div>
           <p className="text-xs text-slate-400 font-light mt-1">
-            Historical closing action overlaid with 20/50-day moving averages and the model&apos;s next-day projected price.
+            Historical closing observations overlaid with 20/50-day moving averages and the model&apos;s experimental next-session forecast.
           </p>
         </div>
 
@@ -97,19 +106,19 @@ export const PriceChart: React.FC<PriceChartProps> = ({ historyPoints, predictio
             SMA 20/50
           </button>
 
-          {/* Timeframe buttons */}
+          {/* Timeframe buttons: 1M, 3M, 6M, 1Y */}
           <div className="flex items-center bg-slate-900/90 rounded-lg p-0.5 border border-slate-800 font-mono text-xs">
-            {([30, 60, 90] as const).map((days) => (
+            {timeRanges.map(({ label, days }) => (
               <button
-                key={days}
+                key={label}
                 onClick={() => setTimeframe(days)}
                 className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
                   timeframe === days
-                    ? "bg-emerald-500 text-slate-950 font-bold"
+                    ? "bg-emerald-500 text-slate-950 font-bold shadow-md shadow-emerald-500/20"
                     : "text-slate-400 hover:text-white"
                 }`}
               >
-                {days}D
+                {label}
               </button>
             ))}
           </div>

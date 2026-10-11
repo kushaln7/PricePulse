@@ -32,7 +32,7 @@ export default function Home() {
         // Concurrent fetching for rapid initialization
         const [predRes, histRes, infoRes] = await Promise.allSettled([
           fetchPrediction(false),
-          fetchHistory(90),
+          fetchHistory(365),
           fetchModelInfo()
         ]);
 

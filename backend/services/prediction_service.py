@@ -2,6 +2,7 @@ import os
 import sys
 import json
 import logging
+from datetime import datetime, timezone
 from typing import Dict, Any, List, Optional
 import joblib
 import pandas as pd
@@ -123,9 +124,30 @@ class PredictionService:
             ma30_ratio=round(float(full_df.loc[latest_idx, "MA30_Ratio"]), 4),
         )
 
+        # Calculate next trading session
+        from services.data_service import get_next_trading_session
+        target_date = get_next_trading_session(latest_date)
+        market_data_ts, is_cached = data_service.get_fetch_metadata()
+        prediction_ts = datetime.now(timezone.utc).isoformat()
+
         # Real market context details (raw index levels & returns)
         raw_close = raw_data["Close"]
         market_context: Dict[str, MarketContextItem] = {}
+
+        # Add AAPL context item for unified market overview
+        aapl_series = raw_close["AAPL"].dropna() if "AAPL" in raw_close.columns else pd.Series([current_price])
+        aapl_ret = float(aapl_series.pct_change().iloc[-1]) if len(aapl_series) > 1 else 0.0
+        aapl_mom5 = float(aapl_series.pct_change(5).iloc[-1]) if len(aapl_series) > 5 else 0.0
+        market_context["AAPL"] = MarketContextItem(
+            ticker="AAPL",
+            name="Apple Inc.",
+            price=round(current_price, 2),
+            daily_return=round(aapl_ret, 4),
+            daily_return_percent=round(aapl_ret * 100, 2),
+            momentum_5=round(aapl_mom5, 4),
+            momentum_5_percent=round(aapl_mom5 * 100, 2),
+            as_of_date=latest_date
+        )
 
         indices_meta = [
             ("^GSPC", "S&P 500"),
@@ -148,7 +170,8 @@ class PredictionService:
                     daily_return=round(ret, 4),
                     daily_return_percent=round(ret * 100, 2),
                     momentum_5=round(mom5, 4),
-                    momentum_5_percent=round(mom5 * 100, 2)
+                    momentum_5_percent=round(mom5 * 100, 2),
+                    as_of_date=latest_date
                 )
 
         # Feature values dictionary
@@ -162,6 +185,12 @@ class PredictionService:
             predicted_next_price=predicted_next_price,
             direction=direction,
             as_of_date=latest_date,
+            target_date=target_date,
+            market_data_timestamp=market_data_ts,
+            prediction_timestamp=prediction_ts,
+            is_cached=is_cached,
+            model_status="operational",
+            uncertainty_calibrated=False,
             model="XGBoost Regressor",
             technical_indicators=tech_indicators,
             market_context=market_context,
@@ -209,7 +238,10 @@ class PredictionService:
             mae=float(eval_dict.get("mae", 0.0)),
             rmse=float(eval_dict.get("rmse", 0.0)),
             r2=float(eval_dict.get("r2", 0.0)),
-            directional_accuracy=float(eval_dict.get("directional_accuracy", 0.0))
+            directional_accuracy=float(eval_dict.get("directional_accuracy", 0.0)),
+            baseline=eval_dict.get("baseline"),
+            previous_model=eval_dict.get("previous_model"),
+            evaluation_split=eval_dict.get("evaluation_split")
         )
 
         explanation = {
