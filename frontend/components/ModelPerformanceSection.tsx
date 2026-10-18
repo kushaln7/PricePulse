@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { ShieldCheck, RotateCw, CheckCircle2, Zap, History } from "lucide-react";
 import { ModelInfoResponse, OnlineLearningStatusResponse } from "@/types/api";
 import { syncDailyModel } from "@/lib/api";
@@ -11,6 +11,13 @@ interface PerformanceProps {
   onModelSynced?: () => void;
 }
 
+const formatAuditTimestamp = (timestamp: string) =>
+  new Intl.DateTimeFormat("en-US", {
+    dateStyle: "short",
+    timeStyle: "medium",
+    timeZone: "UTC",
+  }).format(new Date(timestamp));
+
 export const ModelPerformanceSection: React.FC<PerformanceProps> = ({ 
   modelInfo, 
   onlineStatus,
@@ -18,6 +25,11 @@ export const ModelPerformanceSection: React.FC<PerformanceProps> = ({
 }) => {
   const [syncing, setSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Dynamic live evaluation metrics directly from the model
   const evalMetrics = modelInfo?.evaluation || {
@@ -60,7 +72,7 @@ export const ModelPerformanceSection: React.FC<PerformanceProps> = ({
     ? onlineStatus.history 
     : [
         {
-          timestamp: new Date().toISOString(),
+          timestamp: "2026-10-15T00:00:00.000Z",
           trained_through_date: onlineStatus?.last_trained_date || "2026-10-15",
           total_samples: onlineStatus?.total_samples_trained || 2159,
           new_samples_added: 80,
@@ -242,7 +254,7 @@ export const ModelPerformanceSection: React.FC<PerformanceProps> = ({
               {historyEntries.map((entry, idx) => (
                 <tr key={idx} className="hover:bg-white/[0.02] transition-colors">
                   <td className="py-3.5 pr-4 text-slate-400">
-                    {new Date(entry.timestamp).toLocaleString()}
+                    {isMounted ? formatAuditTimestamp(entry.timestamp) : "—"}
                   </td>
                   <td className="py-3.5 px-4 font-bold text-emerald-400">
                     {entry.trained_through_date}

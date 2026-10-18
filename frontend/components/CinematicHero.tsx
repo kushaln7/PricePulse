@@ -3,7 +3,7 @@
 import React, { useRef, useMemo, useState, useEffect } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import * as THREE from "three";
-import { ArrowDown, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
 
 function seededRandom(seed: number): number {
   const x = Math.sin(seed * 9301 + 49297) * 233280;
@@ -220,52 +220,8 @@ export const CinematicHero: React.FC = () => {
           >
             Explore Dashboard
           </button>
-          <button
-            onClick={() => scrollTo("model-architecture")}
-            className="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-700 hover:border-slate-600 text-slate-200 font-semibold text-sm transition-all cursor-pointer backdrop-blur-md"
-          >
-            How the Model Works
-          </button>
         </div>
 
-        {/* Pipeline Value Stream Pills */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 w-full max-w-3xl">
-          <div className="glass-panel p-3 rounded-xl border border-white/5 text-center">
-            <span className="text-[10px] uppercase font-mono tracking-wider text-slate-400">INPUT STAGE</span>
-            <p className="text-xs font-bold text-slate-200 mt-1">Multi-Asset Feeds</p>
-          </div>
-          <div className="glass-panel p-3 rounded-xl border border-white/5 text-center">
-            <span className="text-[10px] uppercase font-mono tracking-wider text-slate-400">FEATURE LAYER</span>
-            <p className="text-xs font-bold text-slate-200 mt-1">25 Verified Signals</p>
-          </div>
-          <div className="glass-panel p-3 rounded-xl border border-white/5 text-center">
-            <span className="text-[10px] uppercase font-mono tracking-wider text-slate-400">INFERENCE ENGINE</span>
-            <p className="text-xs font-bold text-slate-200 mt-1">XGBoost Regressor</p>
-          </div>
-          <div className="glass-panel p-3 rounded-xl border border-white/5 text-center">
-            <span className="text-[10px] uppercase font-mono tracking-wider text-slate-400">OUTPUT TARGET</span>
-            <p className="text-xs font-bold text-emerald-400 mt-1">Next-Session Return</p>
-          </div>
-        </div>
-
-        {/* Fast Access & Scroll Prompt */}
-        <div className="mt-12 flex flex-col sm:flex-row items-center gap-4 text-xs font-mono text-slate-400">
-          <button
-            onClick={() => scrollTo("prediction-dashboard")}
-            className="text-emerald-400 hover:underline flex items-center gap-1 cursor-pointer"
-          >
-            <span>Skip story directly to live dashboard →</span>
-          </button>
-          <span className="hidden sm:inline text-slate-700">•</span>
-          <button
-            onClick={() => scrollTo("cinematic-story")}
-            className="flex items-center gap-1.5 text-slate-400 hover:text-white transition-colors cursor-pointer group"
-            aria-label="Scroll to cinematic story"
-          >
-            <span>Scroll to explore ML progression</span>
-            <ArrowDown className="w-3.5 h-3.5 group-hover:translate-y-0.5 transition-transform text-emerald-400" />
-          </button>
-        </div>
       </div>
     </section>
   );

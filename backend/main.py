@@ -34,11 +34,7 @@ logging.basicConfig(
 logger = logging.getLogger("pricepulse.api")
 
 async def _daily_online_learning_worker():
-    """
-    Background worker that runs continuously in the FastAPI event loop.
-    Checks for new closed market trading sessions every hour and automatically
-    retrains/adapts the model without service interruption.
-    """
+    """Run the optional online-learning sync without blocking the API loop."""
     logger.info("Starting automated daily online learning background worker...")
     # Initial currency check on startup (non-blocking)
     await asyncio.sleep(2)
@@ -64,10 +60,12 @@ async def _daily_online_learning_worker():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: launch background worker
-    worker_task = asyncio.create_task(_daily_online_learning_worker())
+    worker_task = None
+    if os.getenv("ONLINE_LEARNING_ENABLED", "false").lower() == "true":
+        worker_task = asyncio.create_task(_daily_online_learning_worker())
     yield
-    # Shutdown: cancel worker
+    if worker_task is None:
+        return
     worker_task.cancel()
     try:
         await worker_task
@@ -94,16 +92,14 @@ if allowed_origins_env:
             origins.append(o.rstrip("/"))
     origins = list(dict.fromkeys(origins))
 else:
-    origins = [
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "https://pricepulse.vercel.app"
-    ]
+    # The API is stateless and does not use browser credentials, so allow the
+    # deployed frontend preview and production origins when no explicit list is set.
+    origins = ["*"]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
-    allow_origin_regex=r"^https:\/\/pricepulse.*\.vercel\.app$",
+    allow_origin_regex=None,
     allow_credentials=False,
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
@@ -228,6 +224,8 @@ def sync_daily(force: bool = Query(False, description="Force retraining even if 
     Ingests newest settled stock prices, retrains XGBoost with expanding window data,
     evaluates out-of-sample metrics, and hot-reloads model without downtime.
     """
+    if os.getenv("ONLINE_LEARNING_ENABLED", "false").lower() != "true":
+        raise HTTPException(status_code=503, detail="Online learning is disabled for this deployment.")
     try:
         result = online_learning_service.sync_and_train(force=force)
         return result

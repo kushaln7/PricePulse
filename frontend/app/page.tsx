@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import { Navbar } from "@/components/Navbar";
 import { Preloader } from "@/components/Preloader";
 import { CinematicHero } from "@/components/CinematicHero";
@@ -8,68 +8,50 @@ import { LivePredictionDashboard } from "@/components/LivePredictionDashboard";
 import { PriceChart } from "@/components/PriceChart";
 import { MarketContextCards } from "@/components/MarketContextCards";
 import { TechnicalIndicatorsGrid } from "@/components/TechnicalIndicatorsGrid";
-import { ModelArchitectureSection } from "@/components/ModelArchitectureSection";
-import { ModelPerformanceSection } from "@/components/ModelPerformanceSection";
 import { DisclaimerFooter } from "@/components/DisclaimerFooter";
-import { fetchPrediction, fetchHistory, fetchModelInfo, fetchOnlineStatus } from "@/lib/api";
-import { PredictionResponse, PriceHistoryPoint, ModelInfoResponse, OnlineLearningStatusResponse } from "@/types/api";
+import { fetchPrediction, fetchHistory } from "@/lib/api";
+import { PredictionResponse, PriceHistoryPoint } from "@/types/api";
 
 export default function Home() {
   const [prediction, setPrediction] = useState<PredictionResponse | null>(null);
   const [historyPoints, setHistoryPoints] = useState<PriceHistoryPoint[]>([]);
-  const [modelInfo, setModelInfo] = useState<ModelInfoResponse | null>(null);
-  const [onlineStatus, setOnlineStatus] = useState<OnlineLearningStatusResponse | null>(null);
   const [systemStatus, setSystemStatus] = useState<"online" | "loading" | "error">("loading");
-
-  const handleModelSynced = useCallback(async () => {
-    try {
-      const [predRes, histRes, infoRes, onlineRes] = await Promise.allSettled([
-        fetchPrediction(false),
-        fetchHistory(365),
-        fetchModelInfo(),
-        fetchOnlineStatus()
-      ]);
-
-      if (predRes.status === "fulfilled") setPrediction(predRes.value);
-      if (histRes.status === "fulfilled") setHistoryPoints(histRes.value.points);
-      if (infoRes.status === "fulfilled") setModelInfo(infoRes.value);
-      if (onlineRes.status === "fulfilled") setOnlineStatus(onlineRes.value);
-    } catch (err) {
-      console.error("Failed to refresh synced data:", err);
-    }
-  }, []);
+  const [backendError, setBackendError] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
 
     async function initializeDashboard() {
       try {
-        const [predRes, histRes, infoRes, onlineRes] = await Promise.allSettled([
+        const [predRes, histRes] = await Promise.allSettled([
           fetchPrediction(false),
-          fetchHistory(365),
-          fetchModelInfo(),
-          fetchOnlineStatus()
+          fetchHistory(365)
         ]);
 
         if (!isMounted) return;
 
+        const failures = [predRes, histRes].filter(
+          (result): result is PromiseRejectedResult => result.status === "rejected"
+        );
+
         if (predRes.status === "fulfilled") {
           setPrediction(predRes.value);
-          setSystemStatus("online");
-        } else {
-          setSystemStatus("error");
         }
 
         if (histRes.status === "fulfilled") {
           setHistoryPoints(histRes.value.points);
         }
 
-        if (infoRes.status === "fulfilled") {
-          setModelInfo(infoRes.value);
-        }
-
-        if (onlineRes.status === "fulfilled") {
-          setOnlineStatus(onlineRes.value);
+        if (failures.length === 0) {
+          setSystemStatus("online");
+        } else {
+          setSystemStatus(predRes.status === "fulfilled" ? "online" : "error");
+          const firstFailure = failures[0].reason;
+          setBackendError(
+            firstFailure instanceof Error
+              ? firstFailure.message
+              : "The market data backend could not be reached."
+          );
         }
       } catch (err) {
         console.error("Failed to load initial data:", err);
@@ -97,6 +79,18 @@ export default function Home() {
 
       {/* 4. Main Prediction & Analysis Interface */}
       <div className="relative z-20 bg-[#02040a]">
+        {backendError && (
+          <div className="mx-auto max-w-7xl px-4 pt-8 sm:px-6 lg:px-8">
+            <div role="alert" className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-200">
+              <p className="font-semibold">Market data backend unavailable</p>
+              <p className="mt-1 text-amber-200/80">
+                Connect the frontend to the FastAPI service by setting <code className="font-mono">NEXT_PUBLIC_API_URL</code> to the deployed backend URL. The dashboard will remain blank until the API responds.
+              </p>
+              <p className="mt-2 font-mono text-xs text-amber-300/70">{backendError}</p>
+            </div>
+          </div>
+        )}
+
         {/* Prediction Dashboard */}
         <LivePredictionDashboard
           initialPrediction={prediction}
@@ -113,16 +107,6 @@ export default function Home() {
 
         {/* Technical Indicators Grid */}
         <TechnicalIndicatorsGrid indicators={prediction?.technical_indicators || null} />
-
-        {/* Model Architecture & 25-Feature Catalog */}
-        <ModelArchitectureSection modelInfo={modelInfo} />
-
-        {/* Online Learning & Daily Autonomous Retraining */}
-        <ModelPerformanceSection 
-          modelInfo={modelInfo} 
-          onlineStatus={onlineStatus}
-          onModelSynced={handleModelSynced}
-        />
 
         {/* Disclaimer & Footer */}
         <DisclaimerFooter />
