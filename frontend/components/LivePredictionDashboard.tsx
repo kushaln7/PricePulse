@@ -6,13 +6,9 @@ import {
   RotateCw, 
   ArrowUpRight, 
   ArrowDownRight, 
-  Calendar, 
   Cpu, 
   AlertCircle, 
-  CheckCircle2, 
-  ShieldAlert, 
   Sparkles,
-  Clock,
   History,
   Trash2,
   Info
@@ -46,19 +42,15 @@ export const LivePredictionDashboard: React.FC<DashboardProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
-  const [historyLog, setHistoryLog] = useState<HistoricalPredictionEntry[]>([]);
-
-  // Load prediction history from localStorage
-  useEffect(() => {
+  const [historyLog, setHistoryLog] = useState<HistoricalPredictionEntry[]>(() => {
+    if (typeof window === "undefined") return [];
     try {
       const stored = localStorage.getItem("pricepulse_prediction_history");
-      if (stored) {
-        setHistoryLog(JSON.parse(stored));
-      }
+      return stored ? JSON.parse(stored) : [];
     } catch {
-      // localStorage may fail in private mode
+      return [];
     }
-  }, []);
+  });
 
   const saveToHistory = (pred: PredictionResponse) => {
     try {
@@ -95,9 +87,12 @@ export const LivePredictionDashboard: React.FC<DashboardProps> = ({
 
   useEffect(() => {
     if (initialPrediction) {
-      setPrediction(initialPrediction);
-      setLastUpdated(new Date().toLocaleTimeString());
-      saveToHistory(initialPrediction);
+      const timer = setTimeout(() => {
+        setPrediction(initialPrediction);
+        setLastUpdated(new Date().toLocaleTimeString());
+        saveToHistory(initialPrediction);
+      }, 0);
+      return () => clearTimeout(timer);
     }
   }, [initialPrediction]);
 

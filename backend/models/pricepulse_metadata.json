@@ -39,10 +39,10 @@
         "VIX_Level"
     ],
     "evaluation": {
-        "mae": 0.01211694965685545,
-        "rmse": 0.018730015626421587,
-        "r2": -0.08086511215828596,
-        "directional_accuracy": 0.5192307692307693,
+        "mae": 0.012354609545225196,
+        "rmse": 0.019034307962962346,
+        "r2": -0.038779144284853295,
+        "directional_accuracy": 0.5185185185185185,
         "baseline": {
             "name": "Naive Zero-Return Baseline",
             "mae": 0.011789401369796079,
@@ -60,11 +60,17 @@
         },
         "evaluation_split": {
             "method": "Chronological (80% train, 20% test)",
-            "train_period": "2018-03-15 to 2024-10-22",
-            "test_period": "2024-10-23 to 2026-09-03",
-            "train_observations": 1663,
-            "test_observations": 416,
-            "total_observations": 2079
+            "train_period": "2018-03-15 to 2025-01-27",
+            "test_period": "2025-01-28 to 2026-10-15",
+            "train_observations": 1727,
+            "test_observations": 432,
+            "total_observations": 2159
         }
+    },
+    "online_learning": {
+        "enabled": true,
+        "last_updated": "2026-10-18T02:30:01.289332+00:00",
+        "last_trained_date": "2026-10-15",
+        "total_samples": 2159
     }
 }

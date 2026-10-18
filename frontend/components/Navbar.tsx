@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Activity, Menu, X, ArrowUpRight, Sparkles } from "lucide-react";
+import { Activity, Menu, X, ArrowUpRight } from "lucide-react";
 
 interface NavbarProps {
   onRunPrediction?: () => void;
@@ -30,10 +30,10 @@ export const Navbar: React.FC<NavbarProps> = ({ onRunPrediction, systemStatus = 
 
   const navLinks = [
     { label: "Dashboard", target: "prediction-dashboard" },
-    { label: "Market Analysis", target: "market-context" },
-    { label: "Technical Signals", target: "technical-indicators" },
-    { label: "Model Insights", target: "model-architecture" },
-    { label: "Performance", target: "model-performance" },
+    { label: "Market Overview", target: "market-context" },
+    { label: "Signals", target: "technical-indicators" },
+    { label: "Architecture", target: "model-architecture" },
+    { label: "Online Learning", target: "model-performance" },
     { label: "About", target: "about-disclaimer" },
   ];
 
@@ -61,11 +61,11 @@ export const Navbar: React.FC<NavbarProps> = ({ onRunPrediction, systemStatus = 
                 PRICE<span className="text-emerald-400">PULSE</span>
               </span>
               <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-300">
-                v1.0 ML
+                Online ML
               </span>
             </div>
             <p className="text-[11px] text-slate-400 hidden sm:block">
-              AI-Powered Market Analysis
+              Daily Autonomous Market Adaptation
             </p>
           </div>
         </div>
@@ -98,7 +98,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onRunPrediction, systemStatus = 
                 }`}
               />
             </span>
-            <span className="text-slate-300">AAPL · XGBoost</span>
+            <span className="text-slate-300">Daily Learning: <strong className="text-emerald-400">Active</strong></span>
           </div>
 
           <button

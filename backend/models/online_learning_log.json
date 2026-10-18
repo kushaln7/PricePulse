@@ -1,0 +1,20 @@
+{
+  "enabled": true,
+  "created_at": "2026-10-18T02:29:49.251362+00:00",
+  "last_sync_timestamp": "2026-10-18T02:30:01.292749+00:00",
+  "last_trained_date": "2026-10-15",
+  "total_samples_trained": 2159,
+  "history": [
+    {
+      "timestamp": "2026-10-18T02:30:01.292749+00:00",
+      "trained_through_date": "2026-10-15",
+      "total_samples": 2159,
+      "new_samples_added": 80,
+      "mae": 0.012355,
+      "rmse": 0.019034,
+      "directional_accuracy": 51.85,
+      "r2": -0.0388,
+      "status": "Success"
+    }
+  ]
+}

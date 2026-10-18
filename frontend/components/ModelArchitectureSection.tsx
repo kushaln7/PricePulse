@@ -9,7 +9,6 @@ import {
   Zap, 
   ArrowRight, 
   CheckCircle2, 
-  Code2, 
   SlidersHorizontal 
 } from "lucide-react";
 import { ModelInfoResponse } from "@/types/api";
@@ -301,37 +300,49 @@ export const ModelArchitectureSection: React.FC<ArchitectureProps> = ({ modelInf
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
             <div className="p-4 rounded-2xl bg-black/40 border border-white/5">
               <span className="text-[10px] font-mono uppercase text-slate-400">N_ESTIMATORS</span>
-              <p className="text-2xl font-bold font-mono text-white mt-1">200</p>
+              <p className="text-2xl font-bold font-mono text-white mt-1">
+                {modelInfo?.hyperparameters?.n_estimators ?? 200}
+              </p>
               <span className="text-[10px] text-slate-500">Sequential boosting trees</span>
             </div>
 
             <div className="p-4 rounded-2xl bg-black/40 border border-white/5">
               <span className="text-[10px] font-mono uppercase text-slate-400">LEARNING_RATE</span>
-              <p className="text-2xl font-bold font-mono text-emerald-400 mt-1">0.03</p>
+              <p className="text-2xl font-bold font-mono text-emerald-400 mt-1">
+                {modelInfo?.hyperparameters?.learning_rate ?? 0.03}
+              </p>
               <span className="text-[10px] text-slate-500">Conservative shrinkage step</span>
             </div>
 
             <div className="p-4 rounded-2xl bg-black/40 border border-white/5">
               <span className="text-[10px] font-mono uppercase text-slate-400">MAX_DEPTH</span>
-              <p className="text-2xl font-bold font-mono text-white mt-1">3</p>
+              <p className="text-2xl font-bold font-mono text-white mt-1">
+                {modelInfo?.hyperparameters?.max_depth ?? 3}
+              </p>
               <span className="text-[10px] text-slate-500">Shallow trees prevent overfit</span>
             </div>
 
             <div className="p-4 rounded-2xl bg-black/40 border border-white/5">
               <span className="text-[10px] font-mono uppercase text-slate-400">SUBSAMPLE</span>
-              <p className="text-2xl font-bold font-mono text-white mt-1">0.80</p>
+              <p className="text-2xl font-bold font-mono text-white mt-1">
+                {modelInfo?.hyperparameters?.subsample ?? 0.8}
+              </p>
               <span className="text-[10px] text-slate-500">80% stochastic row sample</span>
             </div>
 
             <div className="p-4 rounded-2xl bg-black/40 border border-white/5">
               <span className="text-[10px] font-mono uppercase text-slate-400">COLSAMPLE_BYTREE</span>
-              <p className="text-2xl font-bold font-mono text-white mt-1">0.80</p>
+              <p className="text-2xl font-bold font-mono text-white mt-1">
+                {modelInfo?.hyperparameters?.colsample_bytree ?? 0.8}
+              </p>
               <span className="text-[10px] text-slate-500">80% stochastic feature sample</span>
             </div>
 
             <div className="p-4 rounded-2xl bg-black/40 border border-white/5">
               <span className="text-[10px] font-mono uppercase text-slate-400">RANDOM_STATE</span>
-              <p className="text-2xl font-bold font-mono text-cyan-400 mt-1">42</p>
+              <p className="text-2xl font-bold font-mono text-cyan-400 mt-1">
+                {modelInfo?.hyperparameters?.random_state ?? 42}
+              </p>
               <span className="text-[10px] text-slate-500">Deterministic seed</span>
             </div>
           </div>

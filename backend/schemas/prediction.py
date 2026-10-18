@@ -85,6 +85,7 @@ class ModelInfoResponse(BaseModel):
     feature_count: int
     evaluation: ModelEvaluation
     explanation: Dict[str, str]
+    online_learning: Optional[Dict[str, Any]] = None
 
 class HealthResponse(BaseModel):
     status: str
@@ -92,3 +93,27 @@ class HealthResponse(BaseModel):
     features_count: int
     timestamp: str
     project: str = "PricePulse"
+
+class OnlineLearningUpdate(BaseModel):
+    timestamp: str
+    trained_through_date: str
+    total_samples: int
+    new_samples_added: int
+    mae: float
+    rmse: float
+    directional_accuracy: float
+    r2: float
+    status: str
+
+class OnlineLearningStatusResponse(BaseModel):
+    enabled: bool = True
+    status: str
+    last_sync_timestamp: Optional[str] = None
+    last_trained_date: Optional[str] = None
+    total_samples_trained: int
+    features_count: int
+    current_metrics: Dict[str, float]
+    history: List[OnlineLearningUpdate] = []
+    last_check_time: Optional[str] = None
+    message: str
+

@@ -1,4 +1,10 @@
-import { PredictionResponse, PriceHistoryResponse, ModelInfoResponse, HealthResponse } from "@/types/api";
+import { 
+  PredictionResponse, 
+  PriceHistoryResponse, 
+  ModelInfoResponse, 
+  HealthResponse,
+  OnlineLearningStatusResponse 
+} from "@/types/api";
 
 const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 // Clean trailing slashes to prevent double-slash paths (e.g., https://api.render.com//predict)
@@ -71,7 +77,7 @@ export async function fetchModelInfo(): Promise<ModelInfoResponse> {
   const url = `${API_BASE_URL}/model-info`;
   try {
     const res = await fetch(url, {
-      next: { revalidate: 3600 },
+      cache: "no-store",
       headers: { "Content-Type": "application/json" }
     });
 
@@ -85,3 +91,46 @@ export async function fetchModelInfo(): Promise<ModelInfoResponse> {
     throw new Error(msg);
   }
 }
+
+export async function fetchOnlineStatus(): Promise<OnlineLearningStatusResponse> {
+  const url = `${API_BASE_URL}/model/online-status`;
+  try {
+    const res = await fetch(url, {
+      cache: "no-store",
+      headers: { "Content-Type": "application/json" }
+    });
+    if (!res.ok) {
+      throw new Error(`Failed to fetch online status (${res.status})`);
+    }
+    return await res.json();
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Failed to load online status";
+    throw new Error(msg);
+  }
+}
+
+export async function syncDailyModel(force: boolean = false): Promise<{
+  updated: boolean;
+  last_trained_date?: string;
+  total_samples?: number;
+  new_samples_added?: number;
+  message: string;
+  error?: string;
+}> {
+  const url = `${API_BASE_URL}/model/sync-daily${force ? "?force=true" : ""}`;
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" }
+    });
+    if (!res.ok) {
+      const errBody = await res.json().catch(() => ({ detail: `HTTP ${res.status}` }));
+      throw new Error(errBody.detail || "Daily synchronization failed");
+    }
+    return await res.json();
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Failed to trigger online learning";
+    throw new Error(msg);
+  }
+}
+

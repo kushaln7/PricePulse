@@ -261,7 +261,8 @@ class PredictionService:
             features=self.features,
             feature_count=len(self.features),
             evaluation=evaluation,
-            explanation=explanation
+            explanation=explanation,
+            online_learning=self.metadata.get("online_learning")
         )
 
 # Singleton instance

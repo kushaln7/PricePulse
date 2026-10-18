@@ -13,12 +13,17 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+import asyncio
+from contextlib import asynccontextmanager
+
 from services.prediction_service import prediction_service
+from services.online_learning_service import online_learning_service
 from schemas.prediction import (
     PredictionResponse,
     HealthResponse,
     PriceHistoryResponse,
-    ModelInfoResponse
+    ModelInfoResponse,
+    OnlineLearningStatusResponse
 )
 
 # Configure logging
@@ -28,18 +33,66 @@ logging.basicConfig(
 )
 logger = logging.getLogger("pricepulse.api")
 
+async def _daily_online_learning_worker():
+    """
+    Background worker that runs continuously in the FastAPI event loop.
+    Checks for new closed market trading sessions every hour and automatically
+    retrains/adapts the model without service interruption.
+    """
+    logger.info("Starting automated daily online learning background worker...")
+    # Initial currency check on startup (non-blocking)
+    await asyncio.sleep(2)
+    try:
+        logger.info("Executing initial online learning synchronization check...")
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(None, online_learning_service.sync_and_train, False)
+    except Exception as e:
+        logger.error(f"Startup online learning sync error: {e}")
+
+    while True:
+        try:
+            # Check every hour (3600 seconds)
+            await asyncio.sleep(3600)
+            logger.info("Checking for newly closed market session for online model adaptation...")
+            loop = asyncio.get_running_loop()
+            await loop.run_in_executor(None, online_learning_service.sync_and_train, False)
+        except asyncio.CancelledError:
+            logger.info("Daily online learning worker cancelled.")
+            break
+        except Exception as e:
+            logger.error(f"Error in background online learning worker: {e}")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: launch background worker
+    worker_task = asyncio.create_task(_daily_online_learning_worker())
+    yield
+    # Shutdown: cancel worker
+    worker_task.cancel()
+    try:
+        await worker_task
+    except asyncio.CancelledError:
+        pass
+
 app = FastAPI(
     title="PricePulse API",
-    description="Short-Term Market Price Prediction System API powered by XGBoost",
-    version="1.0.0",
+    description="Short-Term Market Price Prediction System API with Automated Online Learning powered by XGBoost",
+    version="1.1.0",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
+    lifespan=lifespan
 )
 
 # CORS configuration: explicit allowed frontend origins (credentials disabled for stateless API security)
 allowed_origins_env = os.getenv("ALLOWED_ORIGINS", "")
 if allowed_origins_env:
-    origins = [orig.strip() for orig in allowed_origins_env.split(",") if orig.strip()]
+    raw_origins = [orig.strip() for orig in allowed_origins_env.split(",") if orig.strip()]
+    origins = []
+    for o in raw_origins:
+        origins.append(o)
+        if o != "*":
+            origins.append(o.rstrip("/"))
+    origins = list(dict.fromkeys(origins))
 else:
     origins = [
         "http://localhost:3000",
@@ -50,6 +103,7 @@ else:
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
+    allow_origin_regex=r"^https:\/\/pricepulse.*\.vercel\.app$",
     allow_credentials=False,
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
@@ -152,7 +206,40 @@ def model_info():
             detail="Unable to load model metadata."
         )
 
+@app.get("/model/online-status", response_model=OnlineLearningStatusResponse, tags=["Online Learning"])
+def get_online_status():
+    """
+    Returns real-time status of the automated daily online learning engine:
+    Last trained date, total samples trained, recent accuracy, and update logs.
+    """
+    try:
+        return online_learning_service.get_online_status()
+    except Exception as e:
+        logger.error(f"Failed to fetch online learning status: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="Unable to load online learning status."
+        )
+
+@app.post("/model/sync-daily", tags=["Online Learning"])
+def sync_daily(force: bool = Query(False, description="Force retraining even if date is current")):
+    """
+    Triggers an on-demand daily online learning adaptation:
+    Ingests newest settled stock prices, retrains XGBoost with expanding window data,
+    evaluates out-of-sample metrics, and hot-reloads model without downtime.
+    """
+    try:
+        result = online_learning_service.sync_and_train(force=force)
+        return result
+    except Exception as e:
+        logger.error(f"Daily sync trigger failed: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Online learning update failed: {str(e)}"
+        )
+
 if __name__ == "__main__":
     import uvicorn
     port = int(os.getenv("PORT", 8000))
     uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)
+

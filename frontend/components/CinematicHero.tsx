@@ -3,7 +3,12 @@
 import React, { useRef, useMemo, useState, useEffect } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import * as THREE from "three";
-import { ArrowDown, Cpu, Sparkles, TrendingUp, BarChart2 } from "lucide-react";
+import { ArrowDown, Sparkles } from "lucide-react";
+
+function seededRandom(seed: number): number {
+  const x = Math.sin(seed * 9301 + 49297) * 233280;
+  return x - Math.floor(x);
+}
 
 // Live 3D Financial Intelligence Sphere
 function MarketDataCore() {
@@ -23,9 +28,9 @@ function MarketDataCore() {
     const color3 = new THREE.Color("#3b82f6"); // blue
 
     for (let i = 0; i < count; i++) {
-      const radius = 2.4 + (Math.random() - 0.5) * 0.8;
-      const theta = Math.random() * Math.PI * 2;
-      const phi = Math.acos(2 * Math.random() - 1);
+      const radius = 2.4 + (seededRandom(i * 3 + 1) - 0.5) * 0.8;
+      const theta = seededRandom(i * 3 + 2) * Math.PI * 2;
+      const phi = Math.acos(2 * seededRandom(i * 3 + 3) - 1);
 
       const x = radius * Math.sin(phi) * Math.cos(theta);
       const y = radius * Math.sin(phi) * Math.sin(theta);
@@ -39,7 +44,7 @@ function MarketDataCore() {
 
       // Color gradient based on latitude
       const mixRatio = (y + 2.5) / 5.0;
-      const particleColor = color1.clone().lerp(color2, mixRatio).lerp(color3, Math.random() * 0.3);
+      const particleColor = color1.clone().lerp(color2, mixRatio).lerp(color3, seededRandom(i * 5 + 4) * 0.3);
       col[i * 3] = particleColor.r;
       col[i * 3 + 1] = particleColor.g;
       col[i * 3 + 2] = particleColor.b;
@@ -147,14 +152,17 @@ export const CinematicHero: React.FC = () => {
   const [hasWebGL, setHasWebGL] = useState(true);
 
   useEffect(() => {
-    setMounted(true);
-    try {
-      const canvas = document.createElement("canvas");
-      const gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
-      setHasWebGL(Boolean(gl));
-    } catch {
-      setHasWebGL(false);
-    }
+    const timer = setTimeout(() => {
+      setMounted(true);
+      try {
+        const canvas = document.createElement("canvas");
+        const gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
+        setHasWebGL(Boolean(gl));
+      } catch {
+        setHasWebGL(false);
+      }
+    }, 0);
+    return () => clearTimeout(timer);
   }, []);
 
   const scrollTo = (id: string) => {

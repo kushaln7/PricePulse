@@ -115,6 +115,12 @@ export interface ModelInfoResponse {
   feature_count: number;
   evaluation: ModelEvaluation;
   explanation: Record<string, string>;
+  online_learning?: {
+    enabled: boolean;
+    last_updated: string;
+    last_trained_date: string;
+    total_samples: number;
+  };
 }
 
 export interface HealthResponse {
@@ -124,3 +130,34 @@ export interface HealthResponse {
   timestamp: string;
   project: string;
 }
+
+export interface OnlineLearningUpdate {
+  timestamp: string;
+  trained_through_date: string;
+  total_samples: number;
+  new_samples_added: number;
+  mae: number;
+  rmse: number;
+  directional_accuracy: number;
+  r2: number;
+  status: string;
+}
+
+export interface OnlineLearningStatusResponse {
+  enabled: boolean;
+  status: string;
+  last_sync_timestamp: string | null;
+  last_trained_date: string | null;
+  total_samples_trained: number;
+  features_count: number;
+  current_metrics: {
+    mae: number;
+    rmse: number;
+    directional_accuracy: number;
+    r2: number;
+  };
+  history: OnlineLearningUpdate[];
+  last_check_time: string | null;
+  message: string;
+}
+

@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Sliders, Gauge, Activity, Waves, TrendingUp, Zap, HelpCircle } from "lucide-react";
+import { Sliders, Gauge, Activity, Waves } from "lucide-react";
 import { TechnicalIndicators } from "@/types/api";
 
 interface TechnicalProps {
@@ -9,28 +9,37 @@ interface TechnicalProps {
 }
 
 export const TechnicalIndicatorsGrid: React.FC<TechnicalProps> = ({ indicators }) => {
-  const rsi = indicators?.rsi_14 ?? 50;
-  const macd = indicators?.macd ?? 0;
-  const bbPos = indicators?.bb_position ?? 0.5;
-  const vol7 = indicators?.volatility_7 ? (indicators.volatility_7 * 100).toFixed(2) : "0.00";
-  const sma20 = indicators?.sma20_ratio ?? 1;
-  const sma50 = indicators?.sma50_ratio ?? 1;
+  const hasData = indicators !== null && indicators !== undefined;
+  const rsi = hasData ? indicators.rsi_14 : null;
+  const macd = hasData ? indicators.macd : null;
+  const bbPos = hasData ? indicators.bb_position : null;
+  const vol7 = hasData && indicators.volatility_7 !== undefined ? (indicators.volatility_7 * 100).toFixed(2) : null;
 
   // Determine RSI state
-  let rsiState = "Neutral";
-  let rsiColor = "text-cyan-400 bg-cyan-500/10 border-cyan-500/20";
-  if (rsi > 70) {
-    rsiState = "Overbought (>70)";
-    rsiColor = "text-amber-400 bg-amber-500/10 border-amber-500/20";
-  } else if (rsi < 30) {
-    rsiState = "Oversold (<30)";
-    rsiColor = "text-emerald-400 bg-emerald-500/10 border-emerald-500/20";
+  let rsiState = "Pending Data";
+  let rsiColor = "text-slate-400 bg-slate-800/80 border-slate-700";
+  if (rsi !== null) {
+    if (rsi > 70) {
+      rsiState = "Overbought (>70)";
+      rsiColor = "text-amber-400 bg-amber-500/10 border-amber-500/20";
+    } else if (rsi < 30) {
+      rsiState = "Oversold (<30)";
+      rsiColor = "text-emerald-400 bg-emerald-500/10 border-emerald-500/20";
+    } else {
+      rsiState = "Neutral (30-70)";
+      rsiColor = "text-cyan-400 bg-cyan-500/10 border-cyan-500/20";
+    }
   }
 
   // Determine Bollinger Band state
-  let bbState = "Mid Band Range";
-  if (bbPos > 0.8) bbState = "Near Upper Band (Resistance)";
-  else if (bbPos < 0.2) bbState = "Near Lower Band (Support)";
+  let bbState = "Pending Data";
+  let bbColor = "text-slate-400 bg-slate-800/80 border-slate-700";
+  if (bbPos !== null) {
+    bbColor = "border-violet-500/20 text-violet-300 bg-violet-500/10";
+    if (bbPos > 0.8) bbState = "Near Upper Band (Resistance)";
+    else if (bbPos < 0.2) bbState = "Near Lower Band (Support)";
+    else bbState = "Mid Band Range";
+  }
 
   return (
     <section id="technical-indicators" className="py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
@@ -64,7 +73,7 @@ export const TechnicalIndicatorsGrid: React.FC<TechnicalProps> = ({ indicators }
             </div>
             <div className="flex items-baseline gap-2 mt-2">
               <span className="text-4xl sm:text-5xl font-black font-mono text-white">
-                {rsi.toFixed(1)}
+                {rsi !== null ? rsi.toFixed(1) : "---.-"}
               </span>
               <span className="text-xs font-mono text-slate-500">/ 100</span>
             </div>
@@ -73,7 +82,7 @@ export const TechnicalIndicatorsGrid: React.FC<TechnicalProps> = ({ indicators }
             <div className="mt-5 w-full bg-slate-900 rounded-full h-2 relative overflow-hidden border border-white/5">
               <div
                 className="h-full bg-gradient-to-r from-emerald-500 via-cyan-400 to-amber-500 transition-all duration-500 rounded-full"
-                style={{ width: `${Math.min(100, Math.max(0, rsi))}%` }}
+                style={{ width: rsi !== null ? `${Math.min(100, Math.max(0, rsi))}%` : "0%" }}
               />
             </div>
             <div className="flex justify-between text-[10px] font-mono text-slate-500 mt-1.5">
@@ -97,22 +106,31 @@ export const TechnicalIndicatorsGrid: React.FC<TechnicalProps> = ({ indicators }
               </span>
               <span
                 className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${
-                  macd >= 0
-                    ? "text-emerald-400 bg-emerald-500/10 border-emerald-500/20"
-                    : "text-rose-400 bg-rose-500/10 border-rose-500/20"
+                  macd !== null
+                    ? macd >= 0
+                      ? "text-emerald-400 bg-emerald-500/10 border-emerald-500/20"
+                      : "text-rose-400 bg-rose-500/10 border-rose-500/20"
+                    : "text-slate-400 bg-slate-800/80 border-slate-700"
                 }`}
               >
-                {macd >= 0 ? "Bullish Momentum" : "Bearish Divergence"}
+                {macd !== null
+                  ? macd >= 0
+                    ? "Bullish Momentum"
+                    : "Bearish Divergence"
+                  : "Pending Data"}
               </span>
             </div>
             <div className="flex items-baseline gap-2 mt-2">
               <span
                 className={`text-4xl sm:text-5xl font-black font-mono ${
-                  macd >= 0 ? "text-emerald-400" : "text-rose-400"
+                  macd !== null
+                    ? macd >= 0
+                      ? "text-emerald-400"
+                      : "text-rose-400"
+                    : "text-slate-500"
                 }`}
               >
-                {macd >= 0 ? "+" : ""}
-                {macd.toFixed(3)}
+                {macd !== null ? `${macd >= 0 ? "+" : ""}${macd.toFixed(3)}` : "---.---"}
               </span>
               <span className="text-xs font-mono text-slate-500">SPREAD</span>
             </div>
@@ -122,10 +140,10 @@ export const TechnicalIndicatorsGrid: React.FC<TechnicalProps> = ({ indicators }
               <div className="w-0.5 h-3 bg-slate-500 absolute left-1/2 -translate-x-1/2" />
               <div
                 className={`h-full rounded-full transition-all duration-500 ${
-                  macd >= 0 ? "bg-emerald-400 ml-[50%]" : "bg-rose-400 mr-[50%]"
+                  macd !== null && macd >= 0 ? "bg-emerald-400 ml-[50%]" : macd !== null ? "bg-rose-400 mr-[50%]" : "w-0"
                 }`}
                 style={{
-                  width: `${Math.min(50, Math.abs(macd) * 12)}%`
+                  width: macd !== null ? `${Math.min(50, Math.abs(macd) * 12)}%` : "0%"
                 }}
               />
             </div>
@@ -148,13 +166,13 @@ export const TechnicalIndicatorsGrid: React.FC<TechnicalProps> = ({ indicators }
                 <Activity className="w-4 h-4 text-violet-400" />
                 BOLLINGER BAND POSITION
               </span>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full border border-violet-500/20 text-violet-300 bg-violet-500/10">
+              <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${bbColor}`}>
                 {bbState}
               </span>
             </div>
             <div className="flex items-baseline gap-2 mt-2">
               <span className="text-4xl sm:text-5xl font-black font-mono text-white">
-                {(bbPos * 100).toFixed(1)}%
+                {bbPos !== null ? `${(bbPos * 100).toFixed(1)}%` : "--.-%"}
               </span>
               <span className="text-xs font-mono text-slate-500">POS</span>
             </div>
@@ -163,7 +181,7 @@ export const TechnicalIndicatorsGrid: React.FC<TechnicalProps> = ({ indicators }
             <div className="mt-5 w-full bg-slate-900 rounded-full h-2 relative overflow-hidden border border-white/5">
               <div
                 className="h-full bg-gradient-to-r from-violet-500 via-cyan-400 to-emerald-400 transition-all duration-500 rounded-full"
-                style={{ width: `${Math.min(100, Math.max(0, bbPos * 100))}%` }}
+                style={{ width: bbPos !== null ? `${Math.min(100, Math.max(0, bbPos * 100))}%` : "0%" }}
               />
             </div>
             <div className="flex justify-between text-[10px] font-mono text-slate-500 mt-1.5">
@@ -183,7 +201,7 @@ export const TechnicalIndicatorsGrid: React.FC<TechnicalProps> = ({ indicators }
         <div className="glass-panel p-4 rounded-2xl border border-white/5 text-center">
           <span className="text-[10px] font-mono uppercase text-slate-400">MA-7 RATIO</span>
           <p className="text-lg font-bold font-mono text-white mt-1">
-            {indicators ? indicators.ma7_ratio.toFixed(4) : "1.0000"}
+            {indicators ? indicators.ma7_ratio.toFixed(4) : "---.----"}
           </p>
           <span className="text-[9px] font-mono text-slate-500">Price / 7D MA</span>
         </div>
@@ -191,7 +209,7 @@ export const TechnicalIndicatorsGrid: React.FC<TechnicalProps> = ({ indicators }
         <div className="glass-panel p-4 rounded-2xl border border-white/5 text-center">
           <span className="text-[10px] font-mono uppercase text-slate-400">MA-14 RATIO</span>
           <p className="text-lg font-bold font-mono text-white mt-1">
-            {indicators ? indicators.ma14_ratio.toFixed(4) : "1.0000"}
+            {indicators ? indicators.ma14_ratio.toFixed(4) : "---.----"}
           </p>
           <span className="text-[9px] font-mono text-slate-500">Price / 14D MA</span>
         </div>
@@ -199,7 +217,7 @@ export const TechnicalIndicatorsGrid: React.FC<TechnicalProps> = ({ indicators }
         <div className="glass-panel p-4 rounded-2xl border border-white/5 text-center">
           <span className="text-[10px] font-mono uppercase text-slate-400">MA-30 RATIO</span>
           <p className="text-lg font-bold font-mono text-white mt-1">
-            {indicators ? indicators.ma30_ratio.toFixed(4) : "1.0000"}
+            {indicators ? indicators.ma30_ratio.toFixed(4) : "---.----"}
           </p>
           <span className="text-[9px] font-mono text-slate-500">Price / 30D MA</span>
         </div>
@@ -207,7 +225,7 @@ export const TechnicalIndicatorsGrid: React.FC<TechnicalProps> = ({ indicators }
         <div className="glass-panel p-4 rounded-2xl border border-white/5 text-center">
           <span className="text-[10px] font-mono uppercase text-slate-400">SMA-20 RATIO</span>
           <p className="text-lg font-bold font-mono text-white mt-1">
-            {indicators ? indicators.sma20_ratio.toFixed(4) : "1.0000"}
+            {indicators ? indicators.sma20_ratio.toFixed(4) : "---.----"}
           </p>
           <span className="text-[9px] font-mono text-slate-500">Price / 20D SMA</span>
         </div>
@@ -215,7 +233,7 @@ export const TechnicalIndicatorsGrid: React.FC<TechnicalProps> = ({ indicators }
         <div className="glass-panel p-4 rounded-2xl border border-white/5 text-center">
           <span className="text-[10px] font-mono uppercase text-slate-400">SMA-50 RATIO</span>
           <p className="text-lg font-bold font-mono text-white mt-1">
-            {indicators ? indicators.sma50_ratio.toFixed(4) : "1.0000"}
+            {indicators ? indicators.sma50_ratio.toFixed(4) : "---.----"}
           </p>
           <span className="text-[9px] font-mono text-slate-500">Price / 50D SMA</span>
         </div>
@@ -223,7 +241,7 @@ export const TechnicalIndicatorsGrid: React.FC<TechnicalProps> = ({ indicators }
         <div className="glass-panel p-4 rounded-2xl border border-white/5 text-center">
           <span className="text-[10px] font-mono uppercase text-slate-400">7D VOLATILITY</span>
           <p className="text-lg font-bold font-mono text-emerald-400 mt-1">
-            {vol7}%
+            {vol7 !== null ? `${vol7}%` : "--.--%"}
           </p>
           <span className="text-[9px] font-mono text-slate-500">Rolling Std Return</span>
         </div>

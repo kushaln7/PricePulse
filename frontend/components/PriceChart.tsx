@@ -8,11 +8,10 @@ import {
   XAxis,
   YAxis,
   Tooltip,
-  CartesianGrid,
-  ReferenceDot
+  CartesianGrid
 } from "recharts";
 import { PriceHistoryPoint, PredictionResponse } from "@/types/api";
-import { TrendingUp, BarChart3, Clock } from "lucide-react";
+import { Clock } from "lucide-react";
 
 interface PriceChartProps {
   historyPoints: PriceHistoryPoint[];
@@ -252,7 +251,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({ historyPoints, predictio
                   strokeDasharray="5 5"
                   fill="none"
                   connectNulls={true}
-                  dot={(props: any) => {
+                  dot={(props: { cx?: number; cy?: number; index?: number }) => {
                     const { cx, cy, index } = props;
                     if (index === chartData.length - 1) {
                       return (

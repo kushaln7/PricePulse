@@ -124,6 +124,9 @@ Metrics are reported directly from `pricepulse_metadata.json` evaluated chronolo
 | `GET`, `POST` | `/predict` | `force_refresh` (bool, default `false`) | Runs live inference: downloads latest market feeds, computes 25 features, predicts next-day return & projected price |
 | `GET` | `/history` | `days` (int, 10–365, default `90`) | Returns historical AAPL price points with 20-day and 50-day SMAs |
 | `GET` | `/model-info` | None | Model transparency: hyperparameters, exact evaluation metrics, and feature catalog |
+| `GET` | `/model/online-status` | None | Real-time status of continuous online learning engine, total samples, and training audit history |
+| `POST` | `/model/sync-daily` | `force` (bool, default `false`) | Triggers automated daily adaptation cycle: ingests settled prices, retrains on expanding window, and hot-reloads model |
+
 
 ---
 

@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, Globe2, Shield, Activity } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, Globe2 } from "lucide-react";
 import { MarketContextItem } from "@/types/api";
 
 interface MarketContextProps {

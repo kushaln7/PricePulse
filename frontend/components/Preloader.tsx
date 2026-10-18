@@ -1,51 +1,31 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Activity, ShieldCheck, Database, Zap } from "lucide-react";
+import { Activity } from "lucide-react";
 
-export const Preloader: React.FC<{ onComplete?: () => void }> = ({ onComplete }) => {
-  const [progress, setProgress] = useState(0);
-  const [statusText, setStatusText] = useState("INITIALIZING PRICEPULSE CORE...");
+interface PreloaderProps {
+  isLoading?: boolean;
+  onComplete?: () => void;
+}
+
+export const Preloader: React.FC<PreloaderProps> = ({ isLoading = false, onComplete }) => {
   const [visible, setVisible] = useState(true);
 
   useEffect(() => {
-    // Respect reduced motion
-    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (prefersReducedMotion) {
-      setVisible(false);
-      if (onComplete) onComplete();
-      return;
+    // If not loading, dismiss immediately with a smooth fade
+    if (!isLoading) {
+      const timer = setTimeout(() => {
+        setVisible(false);
+        if (onComplete) onComplete();
+      }, 200);
+      return () => clearTimeout(timer);
     }
-
-    const intervals = [
-      { p: 25, text: "SYNCING MARKET DATA (AAPL, ^GSPC, ^IXIC, ^VIX, XLK)..." },
-      { p: 55, text: "CALCULATING 25 TECHNICAL & CONTEXT FEATURES..." },
-      { p: 85, text: "LOADING XGBOOST REGRESSION ARTIFACTS..." },
-      { p: 100, text: "SYSTEM READY." },
-    ];
-
-    let currentStep = 0;
-    const interval = setInterval(() => {
-      if (currentStep < intervals.length) {
-        setProgress(intervals[currentStep].p);
-        setStatusText(intervals[currentStep].text);
-        currentStep++;
-      } else {
-        clearInterval(interval);
-        setTimeout(() => {
-          setVisible(false);
-          if (onComplete) onComplete();
-        }, 300);
-      }
-    }, 280);
-
-    return () => clearInterval(interval);
-  }, [onComplete]);
+  }, [isLoading, onComplete]);
 
   if (!visible) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#02040a] transition-opacity duration-500">
+    <div className={`fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#02040a] transition-opacity duration-300 ${!isLoading ? "opacity-0 pointer-events-none" : "opacity-100"}`}>
       {/* Background glow */}
       <div className="absolute w-96 h-96 rounded-full bg-emerald-500/10 blur-[120px] pointer-events-none" />
 
@@ -56,38 +36,16 @@ export const Preloader: React.FC<{ onComplete?: () => void }> = ({ onComplete })
           <div className="absolute inset-0 rounded-2xl bg-emerald-400/20 blur-lg animate-ping opacity-25" />
         </div>
 
-        {/* System Title */}
-        <h1 className="text-2xl font-bold font-mono tracking-wider text-white mb-2">
+        {/* Brand Name */}
+        <h2 className="text-xl font-bold tracking-tight text-white font-mono mb-2">
           PRICE<span className="text-emerald-400">PULSE</span>
-        </h1>
-        <p className="text-xs uppercase font-mono tracking-widest text-slate-400 mb-6">
-          SHORT-TERM MARKET PREDICTION SYSTEM
-        </p>
+        </h2>
 
-        {/* Progress Bar */}
-        <div className="w-full bg-slate-900 border border-slate-800 rounded-full h-1.5 mb-3 overflow-hidden">
-          <div
-            className="bg-gradient-to-r from-emerald-500 to-cyan-400 h-full rounded-full transition-all duration-300 ease-out"
-            style={{ width: `${progress}%` }}
-          />
+        {/* Real Status Indicator */}
+        <div className="flex items-center gap-2 text-xs font-mono text-emerald-400">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span>CONNECTING TO MARKET FEEDS...</span>
         </div>
-
-        {/* Status Line */}
-        <div className="flex items-center justify-between w-full text-[11px] font-mono text-slate-400">
-          <span className="truncate pr-2">{statusText}</span>
-          <span className="text-emerald-400 font-semibold">{progress}%</span>
-        </div>
-
-        {/* Skip button for rapid accessibility */}
-        <button
-          onClick={() => {
-            setVisible(false);
-            if (onComplete) onComplete();
-          }}
-          className="mt-6 text-xs font-mono text-slate-500 hover:text-emerald-400 transition-colors cursor-pointer"
-        >
-          Skip Intro →
-        </button>
       </div>
     </div>
   );
