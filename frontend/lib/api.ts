@@ -6,19 +6,27 @@ import {
   OnlineLearningStatusResponse 
 } from "@/types/api";
 
-const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const configuredApiUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
+const rawApiUrl = configuredApiUrl || (process.env.NODE_ENV === "development" ? "http://localhost:8000" : "");
 // Clean trailing slashes to prevent double-slash paths (e.g., https://api.render.com//predict)
 const API_BASE_URL = rawApiUrl.replace(/\/+$/, "");
 
+function apiUrl(path: string): string {
+  if (!API_BASE_URL) {
+    throw new Error("The market API is not configured. Set NEXT_PUBLIC_API_URL in the deployment environment.");
+  }
+  return `${API_BASE_URL}${path}`;
+}
+
 if (typeof window !== "undefined" && process.env.NODE_ENV === "production" && !process.env.NEXT_PUBLIC_API_URL) {
   console.warn(
-    "[PricePulse Warning] NEXT_PUBLIC_API_URL is not configured in production environment. Requests may default to localhost."
+    "[PricePulse Warning] NEXT_PUBLIC_API_URL is not configured in production environment. API requests will be unavailable until it is set."
   );
 }
 
 export async function fetchHealth(): Promise<HealthResponse> {
   try {
-    const res = await fetch(`${API_BASE_URL}/health`, {
+    const res = await fetch(apiUrl("/health"), {
       cache: "no-store",
       headers: { "Content-Type": "application/json" }
     });
@@ -33,7 +41,7 @@ export async function fetchHealth(): Promise<HealthResponse> {
 }
 
 export async function fetchPrediction(forceRefresh: boolean = false): Promise<PredictionResponse> {
-  const url = `${API_BASE_URL}/predict${forceRefresh ? "?force_refresh=true" : ""}`;
+  const url = apiUrl(`/predict${forceRefresh ? "?force_refresh=true" : ""}`);
   try {
     const res = await fetch(url, {
       cache: "no-store",
@@ -55,7 +63,7 @@ export async function fetchPrediction(forceRefresh: boolean = false): Promise<Pr
 }
 
 export async function fetchHistory(days: number = 90): Promise<PriceHistoryResponse> {
-  const url = `${API_BASE_URL}/history?days=${days}`;
+  const url = apiUrl(`/history?days=${days}`);
   try {
     const res = await fetch(url, {
       next: { revalidate: 300 }, // Cache 5 minutes
@@ -74,7 +82,7 @@ export async function fetchHistory(days: number = 90): Promise<PriceHistoryRespo
 }
 
 export async function fetchModelInfo(): Promise<ModelInfoResponse> {
-  const url = `${API_BASE_URL}/model-info`;
+  const url = apiUrl("/model-info");
   try {
     const res = await fetch(url, {
       cache: "no-store",
@@ -93,7 +101,7 @@ export async function fetchModelInfo(): Promise<ModelInfoResponse> {
 }
 
 export async function fetchOnlineStatus(): Promise<OnlineLearningStatusResponse> {
-  const url = `${API_BASE_URL}/model/online-status`;
+  const url = apiUrl("/model/online-status");
   try {
     const res = await fetch(url, {
       cache: "no-store",
@@ -117,7 +125,7 @@ export async function syncDailyModel(force: boolean = false): Promise<{
   message: string;
   error?: string;
 }> {
-  const url = `${API_BASE_URL}/model/sync-daily${force ? "?force=true" : ""}`;
+  const url = apiUrl(`/model/sync-daily${force ? "?force=true" : ""}`);
   try {
     const res = await fetch(url, {
       method: "POST",
