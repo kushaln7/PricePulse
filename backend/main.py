@@ -92,7 +92,9 @@ if allowed_origins_env:
             origins.append(o.rstrip("/"))
     origins = list(dict.fromkeys(origins))
 else:
-    origins = ["http://localhost:3000", "http://127.0.0.1:3000"]
+    # The API is stateless and does not use browser credentials, so allow the
+    # deployed frontend preview and production origins when no explicit list is set.
+    origins = ["*"]
 
 app.add_middleware(
     CORSMiddleware,

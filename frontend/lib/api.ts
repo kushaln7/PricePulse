@@ -7,7 +7,7 @@ import {
 } from "@/types/api";
 
 const configuredApiUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
-const rawApiUrl = configuredApiUrl || (process.env.NODE_ENV === "development" ? "http://localhost:8000" : "");
+const rawApiUrl = configuredApiUrl || "https://pricepulse-2lku.onrender.com";
 // Clean trailing slashes to prevent double-slash paths (e.g., https://api.render.com//predict)
 const API_BASE_URL = rawApiUrl.replace(/\/+$/, "");
 
